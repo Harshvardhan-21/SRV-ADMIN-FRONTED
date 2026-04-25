@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { redemptionApi } from '@/lib/api';
+import { giftApi, redemptionApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -83,18 +83,18 @@ export default function GiftOrders() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const res = await redemptionApi.getAll({ limit: '500' });
+      const res = await giftApi.getOrders({ limit: '500' });
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
       setOrders(data.map((o: any) => ({
         id: o.id,
-        type: o.role ?? o.userType ?? 'electrician',
-        userName: o.userName ?? o.user_name ?? o.user?.name ?? 'Unknown',
-        userCode: o.userCode ?? o.user_code ?? o.userId ?? '',
+        type: o.role ?? o.type ?? 'electrician',
+        userName: o.userName ?? o.user_name ?? 'Unknown',
+        userCode: o.userCode ?? o.user_code ?? '',
         dealerName: o.dealerName ?? o.dealer_name ?? '—',
-        giftName: o.type ?? o.giftName ?? o.gift_name ?? 'Gift',
+        giftName: o.giftName ?? o.gift_name ?? 'Gift',
         giftImage: o.giftImage ?? o.gift_image ?? '',
-        pointsUsed: o.points ?? 0,
-        orderedAt: o.requestedAt ?? o.requested_at ?? o.createdAt ?? new Date().toISOString(),
+        pointsUsed: o.pointsUsed ?? o.points_used ?? 0,
+        orderedAt: o.orderedAt ?? o.ordered_at ?? o.createdAt ?? new Date().toISOString(),
         status: o.status ?? 'pending',
       })));
     } catch (err) {
@@ -114,8 +114,7 @@ export default function GiftOrders() {
 
   const confirmAction = async () => {
     try {
-      if (confirmState.action === 'approve') await redemptionApi.approve(String(confirmState.id));
-      else await redemptionApi.reject(String(confirmState.id));
+      await giftApi.updateOrderStatus(String(confirmState.id), confirmState.action === 'approve' ? 'approved' : 'rejected');
       await loadOrders();
     } catch (err) {
       console.error('Failed to update order:', err);

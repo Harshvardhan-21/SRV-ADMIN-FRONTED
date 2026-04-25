@@ -1,0 +1,35 @@
+
+> srv-admin@0.1.0 dev
+> next dev --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.29.8:3000
+- Environments: .env.local
+✓ Ready in 507ms
+
+○ Compiling / ...
+ GET / 200 in 4.3s (next.js: 4.0s, application-code: 345ms)
+ GET / 200 in 41ms (next.js: 4ms, application-code: 37ms)
+⨯ ./src/app/page.tsx
+Error:   x await isn't allowed in non-async function
+     ,-[C:\Users\dell\Desktop\ADMIN-FRONTEND\src\app\page.tsx:162:1]
+ 159 |       case 'reports': {
+ 160 |         // Fetch real analytics data for export
+ 161 |         try {
+ 162 |           const [dash, scans, users, revenue] = await Promise.all([
+     :                                                 ^^^^^
+ 163 |             import('@/lib/api').then(m => m.analyticsApi.getDashboard()).catch(() => null),
+ 164 |             import('@/lib/api').then(m => m.analyticsApi.getScanStats()).catch(() => null),
+ 165 |             import('@/lib/api').then(m => m.analyticsApi.getUserStats()).catch(() => null),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 451ms (next.js: 175ms, application-code: 276ms)
+ GET / 200 in 404ms (next.js: 129ms, application-code: 275ms)
+ GET / 200 in 581ms (next.js: 172ms, application-code: 409ms)

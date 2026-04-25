@@ -143,10 +143,6 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>SRV Electricals Admin Portal — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <div onClick={() => onNavigate && onNavigate('reports')} style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#FBBF24', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><TrendingUp size={20} /> {stats?.growthRate?.toFixed(1) ?? '0'}%</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Growth Rate</div>
-          </div>
           <div onClick={() => onNavigate && onNavigate('redemptions')} style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(29,78,216,0.25)', borderRadius: 12, border: '1px solid rgba(29,78,216,0.3)', cursor: 'pointer' }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><AlertTriangle size={20} /> {stats?.pendingRedemptions ?? 0}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Pending Action</div>

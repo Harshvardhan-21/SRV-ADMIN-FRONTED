@@ -151,25 +151,43 @@ export default function Home() {
     }
   };
 
-  const getPageData = () => {
+  const getPageData = async () => {
     const dateTag = new Date().toISOString().slice(0, 10);
     switch (active) {
       case 'products': return { rows: products, sheet: 'Products', name: `products-${dateTag}` };
       case 'points-config': return { rows: pointsConfig, sheet: 'PointsConfig', name: `points-config-${dateTag}` };
-      case 'reports': return { rows: [
-        { metric: 'Total Revenue', value: '₹28.4L', trend: '+18.4%' },
-        { metric: 'Total Scans', value: '2,394', trend: '+24.1%' },
-        { metric: 'Points Awarded', value: '4,85,200', trend: '+31.2%' },
-        { metric: 'New Electricians', value: '84', trend: '+12.5%' },
-        { metric: 'Redemptions', value: '₹12.6L', trend: '+8.3%' },
-        { metric: 'Avg Points/User', value: '378', trend: '-2.1%' },
-      ], sheet: 'Reports', name: `reports-${dateTag}` };
+      case 'reports': {
+        // Fetch real analytics data for export
+        try {
+          const [dash, scans, users, revenue] = await Promise.all([
+            import('@/lib/api').then(m => m.analyticsApi.getDashboard()).catch(() => null),
+            import('@/lib/api').then(m => m.analyticsApi.getScanStats()).catch(() => null),
+            import('@/lib/api').then(m => m.analyticsApi.getUserStats()).catch(() => null),
+            import('@/lib/api').then(m => m.analyticsApi.getRevenueStats()).catch(() => null),
+          ]);
+          const rows = [
+            { Metric: 'Total Electricians', Value: dash?.totalElectricians ?? '—', Period: dateTag },
+            { Metric: 'Total Dealers', Value: dash?.totalDealers ?? '—', Period: dateTag },
+            { Metric: 'Active Users', Value: dash?.activeUsers ?? '—', Period: dateTag },
+            { Metric: 'Total Scans (7d)', Value: scans?.totalScans ?? '—', Period: dateTag },
+            { Metric: 'Points Awarded', Value: dash?.totalPointsAwarded ?? '—', Period: dateTag },
+            { Metric: 'Pending Redemptions', Value: dash?.pendingRedemptions ?? '—', Period: dateTag },
+            { Metric: 'Total Redemptions', Value: dash?.totalRedemptions ?? '—', Period: dateTag },
+            { Metric: 'Total Wallet Balance', Value: revenue?.totalWalletBalance ?? '—', Period: dateTag },
+            { Metric: 'Total Redemption Amount', Value: revenue?.totalRedemptions ?? '—', Period: dateTag },
+            { Metric: 'Growth Rate (%)', Value: dash?.growthRate ?? '—', Period: dateTag },
+          ];
+          return { rows, sheet: 'Reports', name: `reports-${dateTag}` };
+        } catch {
+          return { rows: [{ Metric: 'Error', Value: 'Could not fetch analytics data', Period: dateTag }], sheet: 'Reports', name: `reports-${dateTag}` };
+        }
+      }
       default: return null;
     }
   };
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
-    const data = getPageData();
+    const data = await getPageData();
     if (!data) return;
     setExporting(format);
 
@@ -807,7 +825,7 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {active !== 'dashboard' && getPageData() && (
+            {active !== 'dashboard' && ['products', 'points-config', 'reports'].includes(active) && (
               <button
                 onClick={() => setShowExportModal(true)}
                 style={{
