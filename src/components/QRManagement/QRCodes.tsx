@@ -89,20 +89,17 @@ export default function QRCodes({ role }: QRCodesProps) {
 
         const qrCodesWithImages = await Promise.all(
           data.map(async (qr: any) => {
-            // Use backend-saved qrImageUrl directly, regenerate only if missing
-            let qrImage = qr.qrImageUrl ?? qr.qr_image_url ?? '';
-            if (!qrImage) {
-              const code = qr.code ?? qr.qrId ?? String(qr.id);
-              qrImage = await QRCodeLib.toDataURL(code, {
-                width: 300, margin: 2,
-                color: { dark: '#000000', light: '#FFFFFF' },
-                errorCorrectionLevel: 'H',
-              }).catch(() => '');
-            }
+            // Generate QR image from the code string (not stored in DB anymore)
+            const codeStr = qr.code ?? qr.qrId ?? String(qr.id);
+            const qrImage = await QRCodeLib.toDataURL(codeStr, {
+              width: 300, margin: 2,
+              color: { dark: '#000000', light: '#FFFFFF' },
+              errorCorrectionLevel: 'H',
+            }).catch(() => '');
 
             const item: QRCodeItem = {
               id: String(qr.id),
-              qrId: qr.code ?? qr.qrId ?? qr.qr_id ?? String(qr.id),
+              qrId: codeStr,
               batchNo: qr.batchId ?? qr.batchNo ?? qr.batch_no ?? '—',
               productId: qr.productId ?? qr.product_id ?? '—',
               productName: qr.productName ?? qr.product_name ?? qr.product?.name ?? '—',

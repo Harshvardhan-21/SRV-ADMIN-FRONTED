@@ -53,28 +53,49 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     setProgress(0);
 
     try {
-      // Call backend to generate and save QR codes in database
+      // Call backend — saves all QR codes to database, returns code strings
       const result = await qrCodeApi.generate({
         productId: product.id,
         quantity: count,
         batchId: `BATCH-${Date.now().toString(36).toUpperCase()}`,
       });
 
-      const newQRs: GeneratedQR[] = (result as any).codes.map((qr: any) => ({
-        id: qr.code,
-        productId: product.sku || product.id,
-        productName: product.name,
-        points: product.points,
-        qrData: qr.qrImageUrl || '',
-        generatedAt: qr.createdAt || new Date().toISOString(),
-        status: 'active' as const,
-      }));
+      const codes: any[] = (result as any).codes ?? [];
+      const total = codes.length;
+
+      // Generate QR images on frontend from the code strings (in batches to show progress)
+      const newQRs: GeneratedQR[] = [];
+      const BATCH = 50;
+      for (let i = 0; i < total; i += BATCH) {
+        const slice = codes.slice(i, i + BATCH);
+        const batch = await Promise.all(
+          slice.map(async (qr: any) => {
+            const codeStr = qr.code ?? String(qr.id);
+            const qrData = await QRCodeLib.toDataURL(codeStr, {
+              width: 300, margin: 2,
+              color: { dark: '#000000', light: '#FFFFFF' },
+              errorCorrectionLevel: 'H',
+            }).catch(() => '');
+            return {
+              id: codeStr,
+              productId: product.sku || product.id,
+              productName: product.name,
+              points: product.points,
+              qrData,
+              generatedAt: qr.createdAt || new Date().toISOString(),
+              status: 'active' as const,
+            };
+          })
+        );
+        newQRs.push(...batch);
+        setProgress(Math.round(((i + BATCH) / total) * 100));
+      }
 
       setGeneratedQRs(prev => [...newQRs, ...prev]);
       setAlertDialog({
         show: true,
         title: '✅ QR Codes Generated',
-        message: `${count} QR codes for "${product.name}" (SKU: ${product.sku || 'N/A'}, ${product.points} pts) saved to database.`,
+        message: `${count} QR codes for "${product.name}" saved to database successfully.`,
         type: 'success',
       });
     } catch (err: any) {
