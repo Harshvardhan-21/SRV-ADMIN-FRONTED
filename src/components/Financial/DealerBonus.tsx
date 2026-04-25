@@ -92,8 +92,28 @@ export default function DealerBonus() {
     pending: bonuses.filter(c => c.status === 'pending').reduce((s, c) => s + c.bonus, 0),
   }), [bonuses]);
 
-  const handleMarkPaid = (id: number) => { setBonuses(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c)); setMarkPaidId(null); };
-  const handleBulkPaid = () => { setBonuses(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'paid' } : c)); setSelected([]); setBulkPay(false); };
+  const handleMarkPaid = async (id: number) => {
+    const bonus = bonuses.find(c => c.id === id);
+    if (!bonus) return;
+    try {
+      await financeApi.markDealerBonusPaid(String(id));
+      setBonuses(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c));
+    } catch (err) {
+      console.error('Failed to mark bonus as paid:', err);
+    }
+    setMarkPaidId(null);
+  };
+
+  const handleBulkPaid = async () => {
+    try {
+      await financeApi.bulkMarkDealerBonusPaid(selected.map(String));
+      setBonuses(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'paid' } : c));
+    } catch (err) {
+      console.error('Failed to bulk mark bonuses as paid:', err);
+    }
+    setSelected([]);
+    setBulkPay(false);
+  };
   const toggleSelect = (id: number) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = () => setSelected(selected.length === filtered.length ? [] : filtered.map(c => c.id));
 

@@ -102,15 +102,27 @@ export default function TransferPoints() {
     completed: transfers.filter(t => t.status === 'completed').length,
   }), [transfers]);
 
-  const handleReverse = () => {
+  const handleReverse = async () => {
     if (reverseId === null) return;
-    setTransfers(prev => prev.map(t => t.id === reverseId ? { ...t, status: 'reversed' } : t));
+    try {
+      await financeApi.reverseTransfer(String(reverseId));
+      await loadTransfers();
+    } catch (err) {
+      console.error('Failed to reverse transfer:', err);
+      setAlertDialog({ show: true, title: 'Error', message: 'Failed to reverse transfer. Please try again.', type: 'error' });
+    }
     setReverseId(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId === null) return;
-    setTransfers(prev => prev.filter(t => t.id !== deleteId));
+    try {
+      await financeApi.deleteTransfer(String(deleteId));
+      await loadTransfers();
+    } catch (err) {
+      console.error('Failed to delete transfer:', err);
+      setAlertDialog({ show: true, title: 'Error', message: 'Failed to delete transfer. Please try again.', type: 'error' });
+    }
     setDeleteId(null);
   };
 
@@ -127,13 +139,17 @@ export default function TransferPoints() {
     });
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editItem || !editForm.fromUser.trim() || !editForm.toUser.trim() || editForm.points <= 0) {
       setAlertDialog({ show: true, title: 'Required Fields Missing', message: 'Please fill all required fields', type: 'error' });
       return;
     }
     const finalReason = editForm.reason === 'Other' ? editForm.customReason : editForm.reason;
-    setTransfers(prev => prev.map(t => t.id === editItem.id ? { ...t, fromName: editForm.fromUser, toName: editForm.toUser, points: editForm.points, reason: finalReason, status: editForm.status } : t));
+    // Update local display state (wallet transactions are immutable records)
+    setTransfers(prev => prev.map(t => t.id === editItem.id
+      ? { ...t, fromName: editForm.fromUser, toName: editForm.toUser, points: editForm.points, reason: finalReason, status: editForm.status }
+      : t
+    ));
     setEditItem(null);
   };
 

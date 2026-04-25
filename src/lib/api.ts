@@ -256,8 +256,16 @@ export const financeApi = {
   },
   getDealerBonus: () => request<any>('/finance/dealer-bonus'),
   transferDealerBonus: (body: object) => request<any>('/finance/dealer-bonus/transfer', { method: 'POST', body: JSON.stringify(body) }),
+  markDealerBonusPaid: (dealerId: string) =>
+    request<any>(`/finance/dealer-bonus/${dealerId}/mark-paid`, { method: 'PATCH' }),
+  bulkMarkDealerBonusPaid: (dealerIds: string[]) =>
+    request<any>('/finance/dealer-bonus/bulk-mark-paid', { method: 'POST', body: JSON.stringify({ dealerIds }) }),
   getTransferPoints: () => request<any>('/finance/transfer-points'),
   transferPoints: (body: object) => request<any>('/finance/transfer-points', { method: 'POST', body: JSON.stringify(body) }),
+  reverseTransfer: (id: string) =>
+    request<any>(`/finance/transfer-points/${id}/reverse`, { method: 'PATCH' }),
+  deleteTransfer: (id: string) =>
+    request<void>(`/finance/transfer-points/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Analytics / Dashboard ────────────────────────────────────────────────────
