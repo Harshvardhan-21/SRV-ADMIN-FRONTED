@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Zap, Store, ScanLine, Star, Users, TrendingUp, AlertTriangle, BarChart2, Trophy, CreditCard, Gift, MessageSquare } from 'lucide-react';
+import { Zap, Store, ScanLine, Star, Users, AlertTriangle, BarChart2, Trophy, CreditCard, Gift, MessageSquare } from 'lucide-react';
 import { analyticsApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
