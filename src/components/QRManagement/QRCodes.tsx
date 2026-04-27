@@ -77,68 +77,90 @@ export default function QRCodes({ role }: QRCodesProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; qrId: string | null }>({ show: false, qrId: null });
+  
+  // ── Server-side pagination state ──────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
+
+  // ── Real stats (fetched separately — not page-limited) ────────────────────
+  const [qrStats, setQrStats] = useState({ total: 0, active: 0, used: 0 });
+
+  const loadStats = async () => {
+    try {
+      const stats = await qrCodeApi.getStats();
+      setQrStats(stats);
+    } catch (err) {
+      console.error('Failed to load QR stats:', err);
+    }
+  };
+
   const permissions = getPermissions(role);
 
   // Load QR codes from API and generate real QR images
+  const loadQRCodes = async (page = currentPage) => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      };
+      if (searchTerm) params.search = searchTerm;
+      if (filterStatus !== 'all') params.status = filterStatus;
+
+      const res = await qrCodeApi.getAll(params);
+      const data: any[] = Array.isArray(res) ? res : (res as any).data ?? [];
+      const total = Array.isArray(res) ? data.length : (res as any).total ?? data.length;
+      setTotalCount(total);
+
+      const qrCodesWithImages = await Promise.all(
+        data.map(async (qr: any) => {
+          // Generate QR image from the code string (not stored in DB anymore)
+          const codeStr = qr.code ?? qr.qrId ?? String(qr.id);
+          const qrImage = await QRCodeLib.toDataURL(codeStr, {
+            width: 300, margin: 2,
+            color: { dark: '#000000', light: '#FFFFFF' },
+            errorCorrectionLevel: 'H',
+          }).catch(() => '');
+
+          const item: QRCodeItem = {
+            id: String(qr.id),
+            qrId: codeStr,
+            batchNo: qr.batchId ?? qr.batchNo ?? qr.batch_no ?? '—',
+            productId: qr.productId ?? qr.product_id ?? '—',
+            productName: qr.productName ?? qr.product_name ?? qr.product?.name ?? '—',
+            points: qr.points ?? qr.product?.points ?? 0,
+            generatedDate: qr.createdAt ?? qr.generatedDate ?? new Date().toISOString(),
+            generatedBy: qr.generatedBy ?? 'Admin',
+            status: (qr.isScanned || qr.status === 'used') ? 'used' : 'active',
+            usedDate: qr.lastScannedAt ?? qr.usedDate,
+            usedBy: qr.lastScannedBy ?? qr.usedBy,
+            qrImage,
+          };
+          return item;
+        })
+      );
+      setQRCodes(qrCodesWithImages);
+    } catch (err) {
+      console.error('Failed to load QR codes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Re-fetch when search/filter changes
   useEffect(() => {
-    const loadQRCodes = async () => {
-      setLoading(true);
-      try {
-        const res = await qrCodeApi.getAll({ limit: '200' });
-        const data: any[] = Array.isArray(res) ? res : (res as any).data ?? [];
+    setCurrentPage(1);
+    loadQRCodes(1);
+  }, [searchTerm, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        const qrCodesWithImages = await Promise.all(
-          data.map(async (qr: any) => {
-            // Generate QR image from the code string (not stored in DB anymore)
-            const codeStr = qr.code ?? qr.qrId ?? String(qr.id);
-            const qrImage = await QRCodeLib.toDataURL(codeStr, {
-              width: 300, margin: 2,
-              color: { dark: '#000000', light: '#FFFFFF' },
-              errorCorrectionLevel: 'H',
-            }).catch(() => '');
+  useEffect(() => { loadQRCodes(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-            const item: QRCodeItem = {
-              id: String(qr.id),
-              qrId: codeStr,
-              batchNo: qr.batchId ?? qr.batchNo ?? qr.batch_no ?? '—',
-              productId: qr.productId ?? qr.product_id ?? '—',
-              productName: qr.productName ?? qr.product_name ?? qr.product?.name ?? '—',
-              points: qr.product?.points ?? qr.points ?? 0,
-              generatedDate: qr.createdAt ?? qr.generatedDate ?? new Date().toISOString(),
-              generatedBy: qr.generatedBy ?? 'Admin',
-              status: (qr.isScanned || qr.status === 'used') ? 'used' : 'active',
-              usedDate: qr.lastScannedAt ?? qr.usedDate,
-              usedBy: qr.lastScannedBy ?? qr.usedBy,
-              qrImage,
-            };
+  const filteredQRCodes = qrCodes; // server-side filtering
 
-            return item;
-          })
-        );
-
-        setQRCodes(qrCodesWithImages);
-      } catch (err) {
-        console.error('Failed to load QR codes:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadQRCodes();
-  }, []);
-
-  const filteredQRCodes = qrCodes.filter(qr => {
-    const matchesSearch = 
-      qr.qrId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      qr.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      qr.batchNo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || qr.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
-
-  const totalQRs = qrCodes.length;
-  const activeQRs = qrCodes.filter(q => q.status === 'active').length;
-  const usedQRs = qrCodes.filter(q => q.status === 'used').length;
+  const totalQRs = qrStats.total || totalCount;
+  const activeQRs = qrStats.active;
+  const usedQRs = qrStats.used;
 
   const handleDeleteQR = (qrId: string) => {
     setDeleteConfirm({ show: true, qrId });
@@ -437,6 +459,50 @@ export default function QRCodes({ role }: QRCodesProps) {
           </table>
         </div>
       </div>
+
+      {/* ── Pagination ─────────────────────────────────────────────────────── */}
+      {totalCount > PAGE_SIZE && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> QR codes
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadQRCodes(p); }}
+              disabled={currentPage === 1}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >← Prev</button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
+              const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => { setCurrentPage(pageNum); loadQRCodes(pageNum); }}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}
+                >{pageNum}</button>
+              );
+            })}
+
+            <button
+              onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadQRCodes(p); }}
+              disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >Next →</button>
+          </div>
+        </div>
+      )}
 
       {/* QR Details Modal */}
       {selectedQR && (

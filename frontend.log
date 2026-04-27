@@ -33,3 +33,16 @@ Import trace for requested module:
  GET / 200 in 451ms (next.js: 175ms, application-code: 276ms)
  GET / 200 in 404ms (next.js: 129ms, application-code: 275ms)
  GET / 200 in 581ms (next.js: 172ms, application-code: 409ms)
+[browser] Failed to load electricians: TypeError: Failed to fetch
+    at request (src\lib\api.ts:39:21)
+    at Object.getAll (src\lib\api.ts:78:12)
+    at loadData (src\components\Electrician\AllElectricians.tsx:336:24)
+  37 |   if (token) headers['Authorization'] = `Bearer ${token}`;
+  38 |
+> 39 |   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+     |                     ^
+  40 |
+  41 |   if (!res.ok) {
+  42 |     const err = await res.json().catch(() => ({ message: res.statusText })); (src\components\Electrician\AllElectricians.tsx:351:15)
+ GET / 200 in 530ms (next.js: 174ms, application-code: 356ms)
+ GET / 200 in 59ms (next.js: 6ms, application-code: 53ms)

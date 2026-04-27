@@ -77,6 +77,8 @@ export const electricianApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/electricians${q}`);
   },
+  getTierCounts: () =>
+    request<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>('/electricians/tier-counts'),
   getOne: (id: string) => request<any>(`/electricians/${id}`),
   create: (body: object) => request<any>('/electricians', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -91,6 +93,8 @@ export const dealerApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers${q}`);
   },
+  getStats: () =>
+    request<{ total: number; active: number; pending: number; inactive: number }>('/dealers/stats'),
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -117,6 +121,8 @@ export const qrCodeApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number }>(`/qr-codes${q}`);
   },
+  getStats: () =>
+    request<{ total: number; active: number; used: number }>('/qr-codes/stats'),
   generate: (body: { productId: string; quantity: number; batchId?: string }) =>
     request<any>('/qr-codes/generate', { method: 'POST', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/qr-codes/${id}`, { method: 'DELETE' }),

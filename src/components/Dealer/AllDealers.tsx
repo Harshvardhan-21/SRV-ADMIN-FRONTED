@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, X, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -20,16 +20,17 @@ const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string;
   Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '💎', bar: '#3B82F6', max: 999 },
 };
 
-const STATUS_CONFIG: Record<UserStatus, { bg: string; color: string; label: string }> = {
+const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
   active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
   pending: { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
   inactive: { bg: '#FEE2E2', color: '#991B1B', label: 'Inactive' },
+  suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
 function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; onClose: () => void; onEdit: () => void; permissions: any }) {
   const C = useThemePalette();
-  const tier = TIER_CONFIG[dealer.tier];
-  const status = STATUS_CONFIG[dealer.status];
+  const tier = TIER_CONFIG[dealer.tier] ?? TIER_CONFIG['Silver'];
+  const status = STATUS_CONFIG[dealer.status] ?? STATUS_CONFIG['inactive'];
   const linkedElectricians: any[] = [];
   const progress = Math.min(100, (dealer.electricianCount / tier.max) * 100);
 
@@ -181,17 +182,11 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
             <div style={{ gridColumn: '1/-1' }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 6 }}><Building2 size={14} /> Business Information</div></div>
             <div>
               <label style={labelStyle}>Business Name *</label>
-              <input style={inputStyle} value={form.name ?? ''} onChange={e => {
-                const val = e.target.value;
-                if (/^[a-zA-Z\s]*$/.test(val) || val === '') f('name', val);
-              }} placeholder="e.g. Pawan Electricals" />
+              <input style={inputStyle} value={form.name ?? ''} onChange={e => f('name', e.target.value)} placeholder="e.g. Pawan Electricals" />
             </div>
             <div>
               <label style={labelStyle}>Contact Person</label>
-              <input style={inputStyle} value={form.contactPerson ?? ''} onChange={e => {
-                const val = e.target.value;
-                if (/^[a-zA-Z\s]*$/.test(val) || val === '') f('contactPerson', val);
-              }} placeholder="Owner/manager name" />
+              <input style={inputStyle} value={form.contactPerson ?? ''} onChange={e => f('contactPerson', e.target.value)} placeholder="Owner/manager name" />
             </div>
             <div>
               <label style={labelStyle}>Phone *</label>
@@ -270,20 +265,12 @@ export default function Dealers({ role }: DealersProps) {
   const [data, setData] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const res = await dealerApi.getAll({ limit: '500' });
-      setData(Array.isArray(res) ? res : (res as any).data ?? []);
-    } catch (err) {
-      console.error('Failed to load dealers:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── Server-side pagination ────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
 
-  useEffect(() => { loadData(); }, []);
-
+  // ── Filter state (declared before loadData so useCallback can close over them) ──
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -291,6 +278,63 @@ export default function Dealers({ role }: DealersProps) {
   const [filterBank, setFilterBank] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+
+  // ── Stats (fetched separately for accurate totals across all pages) ──
+  const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
+
+  const loadStats = async () => {
+    try {
+      const stats = await dealerApi.getStats();
+      setDealerStats(stats);
+    } catch (err) {
+      console.error('Failed to load dealer stats:', err);
+    }
+  };
+
+  const loadData = useCallback(async (page: number) => {
+    try {
+      setLoading(true);
+      const params: Record<string, string> = {
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      };
+      if (search) params.search = search;
+      if (filterTier !== 'all') params.tier = filterTier;
+      if (filterStatus !== 'all') params.status = filterStatus;
+      if (filterState !== 'all') params.state = filterState;
+      if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
+
+      const res = await dealerApi.getAll(params);
+      const items = Array.isArray(res) ? res : (res as any).data ?? [];
+      const total = Array.isArray(res) ? items.length : (res as any).total ?? items.length;
+      setTotalCount(total);
+      setData(items);
+    } catch (err) {
+      console.error('Failed to load dealers:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, filterTier, filterStatus, filterState, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch from page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    loadData(1);
+  }, [search, filterTier, filterStatus, filterState, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial load
+  useEffect(() => { loadData(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-refresh when tab becomes visible
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadData(currentPage); };
+    document.addEventListener('visibilitychange', onVisible);
+    const interval = setInterval(() => loadData(currentPage), 30000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(interval);
+    };
+  }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [viewing, setViewing] = useState<Dealer | null>(null);
   const [editing, setEditing] = useState<Dealer | null | undefined>(undefined);
@@ -304,37 +348,7 @@ export default function Dealers({ role }: DealersProps) {
 
   const uniqueStates = ['all', ...Array.from(new Set(data.map(d => d.state))).sort()];
 
-  const filtered = data.filter(d => {
-    const q = search.toLowerCase();
-    const joinedDate = new Date(d.joinedDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    
-    let matchDate = true;
-    if (dateFilter === 'today') matchDate = joinedDate.getTime() >= today.getTime();
-    else if (dateFilter === 'yesterday') matchDate = joinedDate.getTime() >= yesterday.getTime() && joinedDate.getTime() < today.getTime();
-    else if (dateFilter === 'week') matchDate = joinedDate.getTime() >= weekAgo.getTime();
-    else if (dateFilter === 'month') matchDate = joinedDate.getTime() >= monthAgo.getTime();
-    else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
-      const fromDate = new Date(customDateRange.from);
-      const toDate = new Date(customDateRange.to);
-      toDate.setHours(23, 59, 59, 999);
-      matchDate = joinedDate.getTime() >= fromDate.getTime() && joinedDate.getTime() <= toDate.getTime();
-    }
-    
-    return (d.name.toLowerCase().includes(q) || d.dealerCode.toLowerCase().includes(q) || d.town.toLowerCase().includes(q) || d.phone.includes(q) || (d.contactPerson ?? '').toLowerCase().includes(q))
-      && matchDate
-      && (filterTier === 'all' || d.tier === filterTier)
-      && (filterStatus === 'all' || d.status === filterStatus)
-      && (filterState === 'all' || d.state === filterState)
-      && (filterBank === 'all' || (filterBank === 'linked' ? d.bankLinked : !d.bankLinked));
-  });
+  const filtered = data; // Server-side pagination handles filtering
 
   const handleSave = async (form: Partial<Dealer>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.town?.trim() || !form.state?.trim()) {
@@ -374,7 +388,7 @@ export default function Dealers({ role }: DealersProps) {
         await dealerApi.update(editing!.id, dealerData);
         setEditing(undefined);
       }
-      await loadData();
+      await loadData(currentPage);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Error', message: err.message || 'Operation failed', type: 'error' });
     }
@@ -389,7 +403,7 @@ export default function Dealers({ role }: DealersProps) {
       try {
         await dealerApi.delete(deleteConfirm.id);
         setDeleteConfirm({ show: false, id: null });
-        await loadData();
+        await loadData(currentPage);
       } catch (err: any) {
         setAlertDialog({ show: true, title: 'Error', message: err.message || 'Delete failed', type: 'error' });
       }
@@ -416,9 +430,9 @@ export default function Dealers({ role }: DealersProps) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Dealers', value: data.length, Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Active', value: data.filter(d => d.status === 'active').length, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Pending Approval', value: data.filter(d => d.status === 'pending').length, Icon: Clock, color: '#92400E', bg: '#FEF3C7' },
+          { label: 'Total Dealers', value: dealerStats.total, Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Active', value: dealerStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Pending Approval', value: dealerStats.pending, Icon: Clock, color: '#92400E', bg: '#FEF3C7' },
         ].map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
@@ -530,15 +544,15 @@ export default function Dealers({ role }: DealersProps) {
           ))}
         </div>
 
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {data.length}</span>
+        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
       </div>
 
       {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading dealers...</div>}
       {viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {filtered.map(d => {
-            const tier = TIER_CONFIG[d.tier];
-            const status = STATUS_CONFIG[d.status];
+            const tier = TIER_CONFIG[d.tier] ?? TIER_CONFIG['Silver'];
+            const status = STATUS_CONFIG[d.status] ?? STATUS_CONFIG['inactive'];
             const progress = Math.min(100, (d.electricianCount / tier.max) * 100);
             return (
               <div key={d.id} style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.2s' }}
@@ -594,8 +608,8 @@ export default function Dealers({ role }: DealersProps) {
             </thead>
             <tbody>
               {filtered.map(d => {
-                const tier = TIER_CONFIG[d.tier];
-                const status = STATUS_CONFIG[d.status];
+                const tier = TIER_CONFIG[d.tier] ?? TIER_CONFIG['Silver'];
+                const status = STATUS_CONFIG[d.status] ?? STATUS_CONFIG['inactive'];
                 return (
                   <tr key={d.id} style={{ borderBottom: `1px solid ${C.border}` }}
                     onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
@@ -628,6 +642,50 @@ export default function Dealers({ role }: DealersProps) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Pagination ─────────────────────────────────────────────────────── */}
+      {totalCount > PAGE_SIZE && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> dealers
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadData(p); }}
+              disabled={currentPage === 1}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >← Prev</button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
+              const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => { setCurrentPage(pageNum); loadData(pageNum); }}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}
+                >{pageNum}</button>
+              );
+            })}
+
+            <button
+              onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadData(p); }}
+              disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >Next →</button>
+          </div>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -19,10 +19,11 @@ const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string;
   Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '💎', bar: '#3B82F6' },
 };
 
-const STATUS_CONFIG: Record<UserStatus, { bg: string; color: string; label: string }> = {
+const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
   active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
   pending: { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
   inactive: { bg: '#FEE2E2', color: '#991B1B', label: 'Inactive' },
+  suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
 function ViewModal({ el, onClose, onEdit, permissions }: { el: Electrician; onClose: () => void; onEdit: () => void; permissions: any }) {
@@ -189,10 +190,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
             </div>
             <div>
               <label style={labelStyle}>Full Name *</label>
-              <input style={inputStyle} value={form.name ?? ''} onChange={e => {
-                const val = e.target.value;
-                if (/^[a-zA-Z\s]*$/.test(val) || val === '') f('name', val);
-              }} placeholder="e.g. Harshvardhan Singh" />
+              <input style={inputStyle} value={form.name ?? ''} onChange={e => f('name', e.target.value)} placeholder="e.g. Harshvardhan Singh" />
             </div>
             <div>
               <label style={labelStyle}>Phone Number *</label>
@@ -329,18 +327,58 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [dealers, setDealers] = useState<{ id: string; name: string; dealerCode: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  // ── Server-side pagination state ──────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
+
+  // ── Filter state (declared before loadData so useCallback can close over them) ──
+  const [search, setSearch] = useState('');
+  const [filterTier, setFilterTier] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterState, setFilterState] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterBank, setFilterBank] = useState('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
+  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+
+  // ── Tier counts (fetched separately for accurate totals across all pages) ──
+  const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
+
+  const loadTierCounts = async () => {
+    try {
+      const counts = await electricianApi.getTierCounts();
+      setTierCounts(counts);
+    } catch (err) {
+      console.error('Failed to load tier counts:', err);
+    }
+  };
+
+  const loadData = useCallback(async (page: number) => {
     try {
       setLoading(true);
+      const params: Record<string, string> = {
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      };
+      if (search) params.search = search;
+      if (filterTier !== 'all') params.tier = filterTier;
+      if (filterStatus !== 'all') params.status = filterStatus;
+      if (filterState !== 'all') params.state = filterState;
+      if (filterCategory !== 'all') params.subCategory = filterCategory;
+      if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
+
       const [elecRes, dealRes] = await Promise.all([
-        electricianApi.getAll({ limit: '500' }),
+        electricianApi.getAll(params),
         dealerApi.getAll({ limit: '500' }),
       ]);
       const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
       setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, dealerCode: d.dealerCode })));
 
       const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
-      // Map dealerName from joined dealer object or from dealData lookup
+      const total = Array.isArray(elecRes) ? rawElecs.length : (elecRes as any).total ?? rawElecs.length;
+      setTotalCount(total);
+
       const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
       setData(rawElecs.map((e: any) => ({
         ...e,
@@ -352,30 +390,27 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, filterTier, filterStatus, filterState, filterCategory, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { loadData(); }, []);
-
-  // Auto-refresh when tab becomes visible (two-way sync with app)
+  // Re-fetch from page 1 when filters change
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') loadData(); };
+    setCurrentPage(1);
+    loadData(1);
+  }, [search, filterTier, filterStatus, filterState, filterCategory, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial load
+  useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-refresh when tab becomes visible
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadData(currentPage); };
     document.addEventListener('visibilitychange', onVisible);
-    // Poll every 30 seconds for real-time updates
-    const interval = setInterval(loadData, 30000);
+    const interval = setInterval(() => loadData(currentPage), 30000);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       clearInterval(interval);
     };
-  }, []);
-
-  const [search, setSearch] = useState('');
-  const [filterTier, setFilterTier] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterState, setFilterState] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [filterBank, setFilterBank] = useState('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
-  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+  }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null | undefined>(undefined);
@@ -390,38 +425,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueStates = ['all', ...Array.from(new Set(data.map(e => e.state))).sort()];
   const uniqueCategories = ['all', ...Array.from(new Set(data.map(e => e.subCategory))).sort()];
 
-  const filtered = data.filter(e => {
-    const q = search.toLowerCase();
-    const matchSearch = e.name.toLowerCase().includes(q) || e.phone.includes(q) || e.city.toLowerCase().includes(q) || e.electricianCode.toLowerCase().includes(q) || e.dealerName.toLowerCase().includes(q);
-    const joinedDate = new Date(e.joinedDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    
-    let matchDate = true;
-    if (dateFilter === 'today') matchDate = joinedDate.getTime() >= today.getTime();
-    else if (dateFilter === 'yesterday') matchDate = joinedDate.getTime() >= yesterday.getTime() && joinedDate.getTime() < today.getTime();
-    else if (dateFilter === 'week') matchDate = joinedDate.getTime() >= weekAgo.getTime();
-    else if (dateFilter === 'month') matchDate = joinedDate.getTime() >= monthAgo.getTime();
-    else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
-      const fromDate = new Date(customDateRange.from);
-      const toDate = new Date(customDateRange.to);
-      toDate.setHours(23, 59, 59, 999);
-      matchDate = joinedDate.getTime() >= fromDate.getTime() && joinedDate.getTime() <= toDate.getTime();
-    }
-    
-    return matchSearch && matchDate
-      && (filterTier === 'all' || e.tier === filterTier)
-      && (filterStatus === 'all' || e.status === filterStatus)
-      && (filterState === 'all' || e.state === filterState)
-      && (filterCategory === 'all' || e.subCategory === filterCategory)
-      && (filterBank === 'all' || (filterBank === 'linked' ? e.bankLinked : !e.bankLinked));
-  });
+  const filtered = data; // Server-side pagination handles filtering
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -460,7 +464,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         await electricianApi.update(editing!.id, electricianData);
         setEditing(undefined);
       }
-      await loadData();
+      await loadData(currentPage);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Error', message: err.message || 'Operation failed', type: 'error' });
     }
@@ -475,7 +479,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       try {
         await electricianApi.delete(deleteConfirm.id);
         setDeleteConfirm({ show: false, id: null });
-        await loadData();
+        await loadData(currentPage);
       } catch (err: any) {
         setAlertDialog({ show: true, title: 'Error', message: err.message || 'Delete failed', type: 'error' });
       }
@@ -505,12 +509,12 @@ export default function Electricians({ role }: ElectriciansProps) {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
         {[
-          { label: 'Total', value: data.length, Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Total', value: totalCount, Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
           ...(['Silver','Gold','Platinum','Diamond'] as MemberTier[]).map(t => {
             const tierIcons = { Silver: '🥈', Gold: '🥇', Platinum: '🏆', Diamond: '💎' };
             return {
               label: t, 
-              value: data.filter(e => e.tier === t).length, 
+              value: tierCounts[t], 
               Icon: () => <span style={{ fontSize: 18 }}>{tierIcons[t]}</span>, 
               color: TIER_CONFIG[t].color, 
               bg: TIER_CONFIG[t].bg,
@@ -637,7 +641,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           )}
         </div>
 
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {data.length}</span>
+        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
       </div>
 
       {/* Table */}
@@ -653,8 +657,8 @@ export default function Electricians({ role }: ElectriciansProps) {
           </thead>
           <tbody>
             {filtered.map((e) => {
-              const tier = TIER_CONFIG[e.tier];
-              const status = STATUS_CONFIG[e.status];
+              const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
+              const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
               return (
                 <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s' }}
                   onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
@@ -711,6 +715,50 @@ export default function Electricians({ role }: ElectriciansProps) {
           </div>
         )}
       </div>
+
+      {/* ── Pagination ─────────────────────────────────────────────────────── */}
+      {totalCount > PAGE_SIZE && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> electricians
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadData(p); }}
+              disabled={currentPage === 1}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >← Prev</button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
+              const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => { setCurrentPage(pageNum); loadData(pageNum); }}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}
+                >{pageNum}</button>
+              );
+            })}
+
+            <button
+              onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadData(p); }}
+              disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >Next →</button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         show={deleteConfirm.show}

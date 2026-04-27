@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ScanLine, QrCode, Scan } from 'lucide-react';
 import { scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -16,61 +16,105 @@ interface ScanRecord {
   scannedAt: string;
 }
 
+const PAGE_SIZE = 50;
+
 export default function ElectricianScanHistory() {
   const C = useThemePalette();
   const [scans, setScans] = useState<ScanRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [totalSingle, setTotalSingle] = useState(0);
+  const [totalMulti, setTotalMulti] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterScanMode, setFilterScanMode] = useState<'all' | 'single' | 'multi'>('all');
   const [showExport, setShowExport] = useState(false);
 
+  const loadData = useCallback(async (page: number) => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {
+        role: 'electrician',
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      };
+      if (search) params.search = search;
+      if (filterScanMode !== 'all') params.mode = filterScanMode;
+
+      const res = await scanApi.getAll(params);
+      const data = Array.isArray(res) ? res : (res as any).data ?? [];
+      const total = Array.isArray(res) ? data.length : (res as any).total ?? data.length;
+      const pts = Array.isArray(res) ? 0 : (res as any).totalPoints ?? 0;
+      const single = Array.isArray(res) ? 0 : (res as any).totalSingle ?? 0;
+      const multi = Array.isArray(res) ? 0 : (res as any).totalMulti ?? 0;
+
+      setScans(data.map((s: any) => ({
+        id: s.id,
+        userId: s.userId,
+        userName: s.userName,
+        productName: s.productName,
+        points: s.points,
+        mode: s.mode ?? 'single',
+        location: s.location,
+        scannedAt: s.scannedAt,
+      })));
+      setTotalCount(total);
+      setTotalPoints(pts);
+      setTotalSingle(single);
+      setTotalMulti(multi);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, filterScanMode]);
+
   useEffect(() => {
-    scanApi.getAll({ role: 'electrician', limit: '500' })
-      .then(res => {
-        const data = Array.isArray(res) ? res : (res as any).data ?? [];
-        setScans(data.map((s: any) => ({
-          id: s.id,
-          userId: s.userId,
-          userName: s.userName,
-          productName: s.productName,
-          points: s.points,
-          mode: s.mode ?? 'single',
-          location: s.location,
-          scannedAt: s.scannedAt,
-        })));
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+    setCurrentPage(1);
+    loadData(1);
+  }, [search, filterScanMode]);
 
-  const singleScans = scans.filter(s => s.mode === 'single');
-  const multiScans = scans.filter(s => s.mode === 'multi');
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    loadData(page);
+  };
 
-  const filtered = scans.filter(s => {
-    const matchSearch = s.userName.toLowerCase().includes(search.toLowerCase()) || s.productName.toLowerCase().includes(search.toLowerCase());
-    const matchMode = filterScanMode === 'all' || s.mode === filterScanMode;
-    return matchSearch && matchMode;
-  });
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`,
+    borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface,
+    color: C.text, boxSizing: 'border-box',
+  };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><ScanLine size={24} style={{ color: C.red }} /> Scan History</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ScanLine size={24} style={{ color: C.red }} /> Scan History
+          </h1>
           <p style={{ color: C.muted, fontSize: 14 }}>View all scan records by electricians</p>
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Scan History" fileName="electrician-scans" getData={() => scans.map(s => ({ Electrician: s.userName, UserId: s.userId, Product: s.productName, ScanType: s.mode, Points: s.points, DateTime: s.scannedAt, Location: s.location ?? '' }))} />
 
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="Scan History"
+        fileName="electrician-scans"
+        getData={() => scans.map(s => ({ Electrician: s.userName, UserId: s.userId, Product: s.productName, ScanType: s.mode, Points: s.points, DateTime: s.scannedAt, Location: s.location ?? '' }))}
+      />
+
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Scans', value: scans.length, color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Total Points', value: scans.reduce((a, s) => a + s.points, 0), color: '#F59E0B', bg: '#FFFBEB' },
-          { label: 'Single Scans', value: singleScans.length, color: '#10B981', bg: '#D1FAE5' },
-          { label: 'Multi Scans', value: multiScans.length, color: '#8B5CF6', bg: '#F5F3FF' },
+          { label: 'Total Scans', value: totalCount.toLocaleString('en-IN'), color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Total Points', value: totalPoints.toLocaleString('en-IN'), color: '#F59E0B', bg: '#FFFBEB' },
+          { label: 'Single Scans', value: totalSingle.toLocaleString('en-IN'), color: '#10B981', bg: '#D1FAE5' },
+          { label: 'Multi Scans', value: totalMulti.toLocaleString('en-IN'), color: '#8B5CF6', bg: '#F5F3FF' },
         ].map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div>
@@ -79,57 +123,29 @@ export default function ElectricianScanHistory() {
         ))}
       </div>
 
-      {/* Scan Mode Analytics */}
-      <div style={{ background: C.card, borderRadius: 14, padding: '24px 28px', border: `1px solid ${C.border}`, marginBottom: 22 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ScanLine size={20} style={{ color: C.red }} /> Scan Mode Analytics
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <div style={{ background: C.surface, borderRadius: 12, padding: '20px 24px', border: `2px solid #3B82F6` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: 'uppercase' }}>Single Scan</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#3B82F6' }}>{singleScans.length}</div>
-              </div>
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <QrCode size={32} color="#3B82F6" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              <div><div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Total Points</div><div style={{ fontSize: 18, fontWeight: 800, color: '#F59E0B' }}>{singleScans.reduce((a, s) => a + s.points, 0)}</div></div>
-              <div><div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Percentage</div><div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{scans.length ? ((singleScans.length / scans.length) * 100).toFixed(1) : 0}%</div></div>
-            </div>
-          </div>
-          <div style={{ background: C.surface, borderRadius: 12, padding: '20px 24px', border: `2px solid #8B5CF6` }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: 'uppercase' }}>Multi Scan</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#8B5CF6' }}>{multiScans.length}</div>
-              </div>
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Scan size={32} color="#8B5CF6" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              <div><div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Total Points</div><div style={{ fontSize: 18, fontWeight: 800, color: '#F59E0B' }}>{multiScans.reduce((a, s) => a + s.points, 0)}</div></div>
-              <div><div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Percentage</div><div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{scans.length ? ((multiScans.length / scans.length) * 100).toFixed(1) : 0}%</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search electrician or product..." style={{ ...inputStyle, flex: 1, minWidth: 220 }} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search electrician or product..."
+          style={{ ...inputStyle, flex: 1, minWidth: 220 }}
+        />
         <select value={filterScanMode} onChange={e => setFilterScanMode(e.target.value as any)} style={{ ...inputStyle, width: 'auto', minWidth: 140 }}>
           <option value="all">All Scan Types</option>
           <option value="single">Single Scan</option>
           <option value="multi">Multi Scan</option>
         </select>
-        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
+        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+          Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of <strong>{totalCount.toLocaleString('en-IN')}</strong>
+        </span>
       </div>
 
+      {/* Table */}
       <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        {loading ? <div style={{ padding: '40px', textAlign: 'center', color: C.muted }}>Loading...</div> : (
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: C.muted }}>Loading...</div>
+        ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
@@ -139,10 +155,12 @@ export default function ElectricianScanHistory() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {scans.length === 0 ? (
                 <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No scan records found</td></tr>
-              ) : filtered.map(scan => (
-                <tr key={scan.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
+              ) : scans.map(scan => (
+                <tr key={scan.id} style={{ borderBottom: `1px solid ${C.border}` }}
+                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
+                  onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 16px' }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{scan.userName}</div>
                     <div style={{ fontSize: 11, color: C.muted }}>{scan.userId?.slice(0, 8)}…</div>
@@ -163,6 +181,31 @@ export default function ElectricianScanHistory() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Page <strong style={{ color: C.text }}>{currentPage}</strong> of <strong style={{ color: C.text }}>{totalPages}</strong>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button onClick={() => goToPage(1)} disabled={currentPage === 1} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>«</button>
+            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}>← Prev</button>
+            {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 7) pageNum = i + 1;
+              else if (currentPage <= 4) pageNum = i + 1;
+              else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+              else pageNum = currentPage - 3 + i;
+              return (
+                <button key={pageNum} onClick={() => goToPage(pageNum)} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}>{pageNum}</button>
+              );
+            })}
+            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= totalPages} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= totalPages ? C.bg : C.card, color: currentPage >= totalPages ? C.muted : C.text, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}>Next →</button>
+            <button onClick={() => goToPage(totalPages)} disabled={currentPage >= totalPages} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= totalPages ? C.bg : C.card, color: currentPage >= totalPages ? C.muted : C.text, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontSize: 12 }}>»</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

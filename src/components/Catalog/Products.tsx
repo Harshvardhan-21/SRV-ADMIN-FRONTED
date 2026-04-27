@@ -175,12 +175,26 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState(initialCategory ?? 'All');
+  
+  // ── Server-side pagination state ──────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 50;
 
-  const loadProducts = async () => {
+  const loadProducts = async (page = currentPage) => {
     try {
       setLoading(true);
-      const res = await productApi.getAll({ limit: '500' });
+      const params: Record<string, string> = {
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      };
+      if (filterCat !== 'All') params.category = filterCat;
+
+      const res = await productApi.getAll(params);
       const products = Array.isArray(res) ? res : (res as any).data ?? [];
+      const total = Array.isArray(res) ? products.length : (res as any).total ?? products.length;
+      setTotalCount(total);
+      
       setData(products.map((p: any) => ({
         id: String(p.id),
         name: p.name,
@@ -206,7 +220,11 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     }
   };
 
-  useEffect(() => { loadProducts(); }, []);
+  // Re-fetch from page 1 whenever category filter changes (also covers initial mount)
+  useEffect(() => {
+    setCurrentPage(1);
+    loadProducts(1);
+  }, [filterCat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (initialCategory) {
@@ -277,7 +295,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         setAlertDialog({ show: true, title: 'Success', message: 'Product updated successfully!', type: 'success' });
         setEditing(undefined);
       }
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (err) {
       console.error('Failed to save product:', err);
       setAlertDialog({ show: true, title: 'Error', message: 'Failed to save product. Please try again.', type: 'error' });
@@ -292,7 +310,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     if (editing) {
       try {
         await productApi.delete(editing.id);
-        await loadProducts();
+        await loadProducts(currentPage);
       } catch (err) {
         console.error('Failed to delete product:', err);
       }
@@ -304,7 +322,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
       await productApi.update(id, updates);
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (err) {
       console.error('Failed to update product:', err);
     }
@@ -346,7 +364,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Products', value: data.length, Icon: Package, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Total Products', value: totalCount, Icon: Package, color: '#3B82F6', bg: '#EFF6FF' },
           { label: 'Active', value: data.filter((p: Product) => p.isActive).length, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
           { label: 'Total Scanned', value: data.reduce((a: number, p: Product) => a + p.totalScanned, 0).toLocaleString('en-IN'), Icon: ScanLine, color: '#7C3AED', bg: '#F5F3FF' },
           { label: 'Low Stock (<500)', value: data.filter((p: Product) => p.stock < 500).length, Icon: AlertTriangle, color: '#92400E', bg: '#FEF3C7' },
@@ -510,6 +528,50 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           </tbody>
         </table>
       </div>
+
+      {/* ── Pagination ─────────────────────────────────────────────────────── */}
+      {totalCount > PAGE_SIZE && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> products
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadProducts(p); }}
+              disabled={currentPage === 1}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >← Prev</button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
+              const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (currentPage <= 4) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = currentPage - 3 + i;
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => { setCurrentPage(pageNum); loadProducts(pageNum); }}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}
+                >{pageNum}</button>
+              );
+            })}
+
+            <button
+              onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadProducts(p); }}
+              disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >Next →</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
