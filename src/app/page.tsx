@@ -15,6 +15,8 @@ import GiftProducts from '@/components/GiftManagement/GiftProducts';
 import GiftOrders from '@/components/GiftManagement/GiftOrders';
 import NotificationsPage from '@/components/Engagement/Notifications';
 import Banners from '@/components/Content/Banners';
+import RewardSchemes from '@/components/Content/RewardSchemes';
+import Festivals from '@/components/Content/Festivals';
 import TransferPoints from '@/components/Financial/TransferPoints';
 import Commissions from '@/components/Financial/DealerBonus';
 import Referrals from '@/components/Engagement/Referrals';
@@ -53,6 +55,8 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'pending-registrations': { title: 'Pending Registrations', Icon: UserCheck },
   'notifications': { title: 'Notifications', Icon: Bell },
   'banners': { title: 'Banners', Icon: ImageIcon },
+  'reward-schemes': { title: 'Reward Schemes', Icon: Gift },
+  festivals: { title: 'Festivals', Icon: Megaphone },
   'transfer-points': { title: 'Transfer Points', Icon: ArrowLeftRight },
   'commissions': { title: 'Dealer Bonus', Icon: Percent },
   'referrals': { title: 'Referrals', Icon: Users },
@@ -275,9 +279,11 @@ export default function Home() {
       case 'qr-generator': return <QRCodeGenerator role={role} />;
       case 'gift-products': return <GiftProducts />;
       case 'gift-orders': return <GiftOrders />;
-      case 'notifications': return <NotificationsPage />;
-      case 'banners': return <Banners />;
-      case 'transfer-points': return <TransferPoints />;
+        case 'notifications': return <NotificationsPage />;
+        case 'banners': return <Banners />;
+        case 'reward-schemes': return <RewardSchemes />;
+        case 'festivals': return <Festivals />;
+        case 'transfer-points': return <TransferPoints />;
       case 'commissions': return <Commissions />;
       case 'referrals': return <Referrals />;
       case 'testimonials': return <Testimonials />;

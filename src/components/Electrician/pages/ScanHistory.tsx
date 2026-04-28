@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { ScanLine, QrCode, Scan } from 'lucide-react';
 import { scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -24,7 +25,7 @@ export default function ElectricianScanHistory() {
   const [filterScanMode, setFilterScanMode] = useState<'all' | 'single' | 'multi'>('all');
   const [showExport, setShowExport] = useState(false);
 
-  useEffect(() => {
+  const loadScans = useCallback(() => {
     scanApi.getAll({ role: 'electrician', limit: '500' })
       .then(res => {
         const data = Array.isArray(res) ? res : (res as any).data ?? [];
@@ -42,6 +43,8 @@ export default function ElectricianScanHistory() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  usePolling(loadScans, 15000);
 
   const singleScans = scans.filter(s => s.mode === 'single');
   const multiScans = scans.filter(s => s.mode === 'multi');

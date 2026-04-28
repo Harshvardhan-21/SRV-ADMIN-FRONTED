@@ -3,13 +3,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, Upload, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { productApi } from '@/lib/api';
+import { categoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface Category {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   description: string;
@@ -38,40 +38,27 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
-  // Load categories from products API — derive unique categories
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const res = await productApi.getAll({ limit: '500' });
-      const products = Array.isArray(res) ? res : (res as any).data ?? [];
-      // Group by category
-      const catMap = new Map<string, { count: number; image: string; isActive: boolean }>();
-      products.forEach((p: any) => {
-        const cat = p.category ?? 'Uncategorized';
-        if (!catMap.has(cat)) {
-          catMap.set(cat, { count: 0, image: p.image ?? '', isActive: p.isActive ?? true });
-        }
-        const entry = catMap.get(cat)!;
-        entry.count++;
-        if (!entry.image && p.image) entry.image = p.image;
-      });
-      const derived: Category[] = Array.from(catMap.entries()).map(([name, val], i) => ({
-        id: i + 1,
-        name,
-        slug: toSlug(name),
-        description: '',
-        image: val.image,
-        productCount: val.count,
-        isActive: val.isActive,
-        sortOrder: i + 1,
-      }));
-      setCategories(derived);
+      const res = await categoryApi.getAll();
+      const rows = Array.isArray(res) ? res : [];
+      setCategories(rows.map((row: any) => ({
+        id: String(row.id),
+        name: row.name,
+        slug: row.slug ?? toSlug(row.name),
+        description: row.description ?? '',
+        image: row.image ?? '',
+        productCount: Number(row.productCount ?? 0),
+        isActive: row.isActive !== false,
+        sortOrder: Number(row.sortOrder ?? 1),
+      })));
     } catch (err) {
       console.error('Failed to load categories:', err);
     } finally {
@@ -123,26 +110,42 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
       setAlertDialog({ show: true, title: 'Validation Error', message: 'Category Name is required!', type: 'error' });
       return;
     }
-    if (editingId !== null) {
-      // Update local state only (categories are derived from products)
-      setCategories(prev => prev.map(c => c.id === editingId ? { ...c, ...form } : c));
-      setAlertDialog({ show: true, title: 'Success', message: 'Category updated!', type: 'success' });
-    } else {
-      const newId = Math.max(0, ...categories.map(c => c.id)) + 1;
-      setCategories(prev => [...prev, { id: newId, ...form }]);
-      setAlertDialog({ show: true, title: 'Success', message: 'Category added!', type: 'success' });
+    try {
+      if (editingId !== null) {
+        await categoryApi.update(editingId, form);
+        setAlertDialog({ show: true, title: 'Success', message: 'Category updated!', type: 'success' });
+      } else {
+        await categoryApi.create(form);
+        setAlertDialog({ show: true, title: 'Success', message: 'Category added!', type: 'success' });
+      }
+      await loadCategories();
+      setShowModal(false);
+    } catch (error: any) {
+      setAlertDialog({ show: true, title: 'Error', message: error?.message || 'Failed to save category', type: 'error' });
+      return;
     }
-    setShowModal(false);
   };
 
-  const handleToggle = (id: number) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
+  const handleToggle = async (id: string) => {
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+    try {
+      await categoryApi.update(id, { ...category, isActive: !category.isActive });
+      await loadCategories();
+    } catch (error) {
+      console.error('Toggle failed', error);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId === null) return;
-    setCategories(prev => prev.filter(c => c.id !== deleteId));
-    setDeleteId(null);
+    try {
+      await categoryApi.delete(deleteId);
+      await loadCategories();
+      setDeleteId(null);
+    } catch (error: any) {
+      setAlertDialog({ show: true, title: 'Error', message: error?.message || 'Failed to delete category', type: 'error' });
+    }
   };
 
   const getExportData = () =>

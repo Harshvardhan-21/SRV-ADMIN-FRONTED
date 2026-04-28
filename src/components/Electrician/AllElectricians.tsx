@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -354,18 +355,13 @@ export default function Electricians({ role }: ElectriciansProps) {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  usePolling(loadData, 15000);
 
-  // Auto-refresh when tab becomes visible (two-way sync with app)
+  // Also refresh when tab becomes visible
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') loadData(); };
     document.addEventListener('visibilitychange', onVisible);
-    // Poll every 30 seconds for real-time updates
-    const interval = setInterval(loadData, 30000);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      clearInterval(interval);
-    };
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const [search, setSearch] = useState('');

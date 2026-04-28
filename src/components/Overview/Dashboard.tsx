@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Zap, Store, ScanLine, Star, Users, TrendingUp, AlertTriangle, BarChart2, Trophy, CreditCard, Gift, MessageSquare } from 'lucide-react';
 import { analyticsApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
@@ -32,43 +33,43 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   const [pendingEnquiries, setPendingEnquiries] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [dashData, scansData, redemptionsData, scanStatsData, userStatsData, supportData] = await Promise.all([
-          analyticsApi.getDashboard(),
-          scanApi.getAll({ limit: '5' }),
-          redemptionApi.getAll({ status: 'pending', limit: '5' }),
-          analyticsApi.getScanStats(),
-          analyticsApi.getUserStats(),
-          supportApi.getAll({ status: 'open', limit: '1' }),
-        ]);
-        setStats(dashData);
-        setRecentScans(Array.isArray(scansData) ? scansData : (scansData as any).data ?? []);
-        setPendingRedemptions(Array.isArray(redemptionsData) ? redemptionsData : (redemptionsData as any).data ?? []);
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [dashData, scansData, redemptionsData, scanStatsData, userStatsData, supportData] = await Promise.all([
+        analyticsApi.getDashboard(),
+        scanApi.getAll({ limit: '5' }),
+        redemptionApi.getAll({ status: 'pending', limit: '5' }),
+        analyticsApi.getScanStats(),
+        analyticsApi.getUserStats(),
+        supportApi.getAll({ status: 'open', limit: '1' }),
+      ]);
+      setStats(dashData);
+      setRecentScans(Array.isArray(scansData) ? scansData : (scansData as any).data ?? []);
+      setPendingRedemptions(Array.isArray(redemptionsData) ? redemptionsData : (redemptionsData as any).data ?? []);
 
-        // Real scan chart — last 7 days
-        const last7 = scanStatsData?.last7Days ?? [];
-        setScanChartData(last7.map((d: any) => ({ day: d.day, value: d.total })));
+      // Real scan chart — last 7 days
+      const last7 = scanStatsData?.last7Days ?? [];
+      setScanChartData(last7.map((d: any) => ({ day: d.day, value: d.total })));
 
-        // Real tier distribution from userStats
-        const tiers: Record<string, number> = { Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 };
-        (userStatsData?.tierDistribution ?? []).forEach((t: any) => {
-          const key = t.tier ? t.tier.charAt(0).toUpperCase() + t.tier.slice(1).toLowerCase() : '';
-          if (key in tiers) tiers[key] = parseInt(t.count ?? t.electrician_count ?? 0);
-        });
-        setTierData(tiers);
+      // Real tier distribution from userStats
+      const tiers: Record<string, number> = { Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 };
+      (userStatsData?.tierDistribution ?? []).forEach((t: any) => {
+        const key = t.tier ? t.tier.charAt(0).toUpperCase() + t.tier.slice(1).toLowerCase() : '';
+        if (key in tiers) tiers[key] = parseInt(t.count ?? t.electrician_count ?? 0);
+      });
+      setTierData(tiers);
 
-        // Pending enquiries count
-        setPendingEnquiries((supportData as any)?.total ?? 0);
-      } catch (err) {
-        console.error('Dashboard load error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      // Pending enquiries count
+      setPendingEnquiries((supportData as any)?.total ?? 0);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Poll every 15 seconds — picks up mobile app changes in real-time
+  usePolling(loadDashboard, 15000);
 
   const handleApproveRedemption = async (id: string) => {
     try {
@@ -119,7 +120,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             </div>
             <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {[{ label: 'Electrician', emoji: '⚡', nav: 'electricians' }, { label: 'Dealer', emoji: '🏬', nav: 'dealers' }].map(item => (
-                <button key={item.label} onClick={() => { setShowFinanceChoice(false); onNavigate && onNavigate(item.nav, 'finance'); }}
+                <button key={item.label} onClick={() => { setShowFinanceChoice(false); if (onNavigate) onNavigate(item.nav, 'finance'); }}
                   style={{ background: C.surface, border: `2px solid ${C.border}`, borderRadius: 14, padding: '20px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FFF0F0'; (e.currentTarget as HTMLButtonElement).style.borderColor = C.red; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}>
@@ -162,7 +163,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {statCards.map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 16, padding: '18px 20px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
-            onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } onNavigate && s.navigateTo && onNavigate(s.navigateTo, (s as any).subPage); }}
+            onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } if (onNavigate && s.navigateTo) onNavigate(s.navigateTo, (s as any).subPage); }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

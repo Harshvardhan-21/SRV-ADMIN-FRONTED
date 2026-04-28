@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Search, SlidersHorizontal, Eye, Upload, ArrowLeftRight, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { financeApi } from '@/lib/api';
@@ -81,7 +82,7 @@ export default function TransferPoints() {
     }
   };
 
-  useEffect(() => { loadTransfers(); }, []);
+  usePolling(loadTransfers, 15000);
 
   const filtered = useMemo(() => {
     let list = transfers;

@@ -36,7 +36,12 @@ async function request<T>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  } catch {
+    throw new Error(`Unable to reach backend at ${BASE_URL}. Make sure the SRV backend is running on port 3001.`);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -109,6 +114,13 @@ export const productApi = {
   create: (body: object) => request<any>('/products', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/products/${id}`, { method: 'DELETE' }),
+};
+
+export const categoryApi = {
+  getAll: () => request<any[]>('/products/categories'),
+  create: (body: object) => request<any>('/products/categories', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/products/categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => request<void>(`/products/categories/${id}`, { method: 'DELETE' }),
 };
 
 // ─── QR Codes ─────────────────────────────────────────────────────────────────
@@ -312,4 +324,21 @@ export const referralApi = {
   update: (id: string, body: object) => request<any>(`/referrals/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/referrals/${id}`, { method: 'DELETE' }),
   getStats: () => request<any>('/referrals/stats'),
+};
+
+export const rewardSchemeApi = {
+  getAll: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any[]>(`/app-content/reward-schemes${q}`);
+  },
+  create: (body: object) => request<any>('/app-content/reward-schemes', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/app-content/reward-schemes/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => request<void>(`/app-content/reward-schemes/${id}`, { method: 'DELETE' }),
+};
+
+export const festivalApi = {
+  getAll: () => request<any[]>('/app-content/festivals'),
+  create: (body: object) => request<any>('/app-content/festivals', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/app-content/festivals/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => request<void>(`/app-content/festivals/${id}`, { method: 'DELETE' }),
 };
