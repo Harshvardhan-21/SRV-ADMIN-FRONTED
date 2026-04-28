@@ -14,7 +14,7 @@ interface ProductsProps {
   onCategoryUsed?: () => void;
 }
 
-const CATEGORIES = ['All','Fan Box','Concealed Box','Modular Box','Junction Box','Surface Box','MCB Box','LED Lights','Appliances','Accessories'];
+const CATEGORIES_FALLBACK = ['Fan Box','Concealed Box','Modular Box','Junction Box','Surface Box','MCB Box','Change Over','Fan Rods','Kitkat Fuses','Bus Bar Premium','Bus Bar Super','Main Switch Fuse Units','Junction Box','PVC CONDUIT BEND','PVC CONDUIT PIPE','VENTOGUARD','General'];
 
 function ProductModal({ product, onClose, onEdit, permissions }: { product: Product; onClose: () => void; onEdit: () => void; permissions: any }) {
   const C = useThemePalette();
@@ -74,26 +74,30 @@ function ProductModal({ product, onClose, onEdit, permissions }: { product: Prod
   );
 }
 
-function EditModal({ product, onClose, onSave, onDelete }: { product: Product | null; onClose: () => void; onSave: (d: Partial<Product>) => void; onDelete?: () => void }) {
+function EditModal({ product, onClose, onSave, onDelete, categories }: { product: Product | null; onClose: () => void; onSave: (d: Partial<Product>) => void; onDelete?: () => void; categories: string[] }) {
   const C = useThemePalette();
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const isAdd = !product;
   const [imageMode, setImageMode] = useState<'url' | 'file'>('url');
+  const [imageUploading, setImageUploading] = useState(false);
   const [form, setForm] = useState<Partial<Product>>(product ?? {
-    name: '', sub: '', category: 'Fan Box', image: '', points: 10, badge: '', price: '', mrp: '',
+    name: '', sub: '', category: categories[0] ?? 'Fan Box', image: '', points: 10, badge: '', price: '', mrp: '',
     stock: 0, totalScanned: 0, sku: '', description: '', isActive: true,
   });
   const f = (k: keyof Product, v: unknown) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        f('image', ev.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const url = await productApi.uploadImage(file);
+      f('image', url);
+    } catch {
+      alert('Image upload failed. Please try again or use a URL instead.');
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -113,7 +117,7 @@ function EditModal({ product, onClose, onSave, onDelete }: { product: Product | 
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Sub-description *</label><input style={inputStyle} value={form.sub ?? ''} onChange={e => f('sub', e.target.value)} placeholder="Short product description" /></div>
             <div><label style={labelStyle}>Category *</label>
               <select style={inputStyle} value={form.category ?? ''} onChange={e => f('category', e.target.value)}>
-                {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div><label style={labelStyle}>Badge</label><input style={inputStyle} value={form.badge ?? ''} onChange={e => f('badge', e.target.value)} placeholder="e.g. Popular, New, Hot" /></div>
@@ -133,10 +137,10 @@ function EditModal({ product, onClose, onSave, onDelete }: { product: Product | 
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <label style={{ flex: 1, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
-                    <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+                  <label style={{ flex: 1, display: 'flex', flexDirection: 'column', cursor: imageUploading ? 'not-allowed' : 'pointer' }}>
+                    <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} disabled={imageUploading} />
                     <div style={{ padding: '20px', border: `2px dashed ${C.border}`, borderRadius: 8, textAlign: 'center', background: C.bg, color: C.muted, fontSize: 13 }}>
-                      {form.image ? 'Click to change image' : 'Click to upload image'}
+                      {imageUploading ? '⏳ Uploading...' : form.image ? 'Click to change image' : 'Click to upload image'}
                     </div>
                   </label>
                   {form.image && (
@@ -165,7 +169,7 @@ function EditModal({ product, onClose, onSave, onDelete }: { product: Product | 
             {!isAdd && onDelete && (
               <button onClick={onDelete} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>🗑️ Delete</button>
             )}
-            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{isAdd ? '✅ Add Product' : '💾 Save Changes'}</button>
+            <button onClick={() => onSave(form)} disabled={imageUploading} style={{ flex: 1, background: imageUploading ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: imageUploading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{imageUploading ? '⏳ Uploading Image...' : isAdd ? '✅ Add Product' : '💾 Save Changes'}</button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -180,6 +184,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState(initialCategory ?? 'All');
   const [productStats, setProductStats] = useState({ total: 0, active: 0, totalScanned: 0, lowStock: 0 });
+  const [dbCategories, setDbCategories] = useState<string[]>(CATEGORIES_FALLBACK);
   
   // ── Server-side pagination state ──────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
@@ -228,6 +233,14 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       const mappedProducts = products.map(mapApiProduct);
       setData(mappedProducts);
+
+      // Load ALL products to derive unique categories (only on first load)
+      if (page === 1) {
+        const allRes = await productApi.getAll({ limit: '1000', page: '1' });
+        const allProducts = (Array.isArray(allRes) ? allRes : (allRes as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
+        const uniqueCats = Array.from(new Set(allProducts.map((p: any) => String(p.category ?? '').trim()).filter(Boolean))).sort();
+        if (uniqueCats.length > 0) setDbCategories(uniqueCats);
+      }
 
       if (total > mappedProducts.length) {
         const statsRes = await productApi.getAll({
@@ -316,6 +329,16 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, totalScanned: _ts, subCategory: _sc, weight: _w, ...payload } = form as any;
 
+    // Convert price/mrp strings back to numbers (frontend displays as "₹100" but backend needs 100)
+    if (payload.price) {
+      const priceStr = String(payload.price).replace(/[₹,\s]/g, '');
+      payload.price = priceStr ? parseFloat(priceStr) : 0;
+    }
+    if (payload.mrp) {
+      const mrpStr = String(payload.mrp).replace(/[₹,\s]/g, '');
+      payload.mrp = mrpStr ? parseFloat(mrpStr) : undefined;
+    }
+
     try {
       if (showAdd) {
         await productApi.create(payload);
@@ -361,7 +384,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {viewing && <ProductModal product={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} />}
-      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={handleDelete} />}
+      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={handleDelete} categories={dbCategories} />}
       
       <ConfirmDialog
         show={showDeleteConfirm}
@@ -408,7 +431,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       {/* Category filter pills */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {CATEGORIES.map(cat => (
+        {Array.from(new Set(['All', ...dbCategories])).map(cat => (
           <button key={cat} onClick={() => setFilterCat(cat)} style={{ padding: '6px 14px', borderRadius: 20, border: `1.5px solid ${filterCat === cat ? C.red : C.border}`, background: filterCat === cat ? '#FFF0F0' : C.card, color: filterCat === cat ? C.red : C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{cat}</button>
         ))}
       </div>

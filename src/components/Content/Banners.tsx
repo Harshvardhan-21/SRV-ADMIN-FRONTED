@@ -8,7 +8,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface Banner {
-  id: number;
+  id: string;
   title: string;
   imageUrl: string;
   bgColor: string;
@@ -26,9 +26,9 @@ export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const loadBanners = async () => {
@@ -71,7 +71,7 @@ export default function BannersPage() {
     }
     try {
       if (editingId !== null) {
-        await bannerApi.update(String(editingId), form);
+        await bannerApi.update(editingId, form);
         setAlertDialog({ show: true, title: 'Success', message: 'Banner updated successfully!', type: 'success' });
       } else {
         await bannerApi.create(form);
@@ -80,16 +80,17 @@ export default function BannersPage() {
       await loadBanners();
     } catch (err) {
       console.error('Failed to save banner:', err);
-      setAlertDialog({ show: true, title: 'Error', message: 'Failed to save banner. Please try again.', type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Failed to save banner. Please try again.';
+      setAlertDialog({ show: true, title: 'Error', message: msg, type: 'error' });
     }
     setShowModal(false);
   };
 
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string) => {
     const banner = banners.find(b => b.id === id);
     if (!banner) return;
     try {
-      await bannerApi.update(String(id), { isActive: !banner.isActive });
+      await bannerApi.update(id, { isActive: !banner.isActive });
       setBanners(prev => prev.map(b => b.id === id ? { ...b, isActive: !b.isActive } : b));
     } catch (err) {
       console.error('Failed to toggle banner:', err);
@@ -99,7 +100,7 @@ export default function BannersPage() {
   const handleDelete = async () => {
     if (deleteId === null) return;
     try {
-      await bannerApi.delete(String(deleteId));
+      await bannerApi.delete(deleteId);
       setBanners(prev => prev.filter(b => b.id !== deleteId));
     } catch (err) {
       console.error('Failed to delete banner:', err);

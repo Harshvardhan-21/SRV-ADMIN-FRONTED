@@ -120,6 +120,19 @@ export const productApi = {
   create: (body: object) => request<any>('/products', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/products/${id}`, { method: 'DELETE' }),
+  uploadImage: async (file: File): Promise<string> => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE_URL}/upload/product-image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Image upload failed');
+    const data = await res.json();
+    return data.url as string;
+  },
 };
 
 // ─── QR Codes ─────────────────────────────────────────────────────────────────
@@ -167,7 +180,8 @@ export const redemptionApi = {
   },
   approve: (id: string) => request<any>(`/redemptions/${id}/approve`, { method: 'PATCH' }),
   reject: (id: string, reason?: string) =>
-    request<any>(`/redemptions/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ reason }) }),
+    request<any>(`/redemptions/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ rejectionReason: reason || 'Rejected by admin' }) }),
+  delete: (id: string) => request<void>(`/redemptions/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -217,10 +231,7 @@ export const offerApi = {
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 export const testimonialApi = {
-  getAll: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<{ data: any[]; total: number }>(`/testimonials${q}`);
-  },
+  getAll: () => request<any[]>('/testimonials'),
   create: (body: object) => request<any>('/testimonials', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/testimonials/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/testimonials/${id}`, { method: 'DELETE' }),

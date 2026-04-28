@@ -9,7 +9,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 type OrderStatus = 'pending' | 'approved' | 'shipped' | 'delivered' | 'rejected';
 
 interface GiftOrder {
-  id: number;
+  id: string;
   type: 'electrician' | 'dealer';
   userName: string;
   userCode: string;
@@ -78,7 +78,7 @@ export default function GiftOrders() {
   const [selectedOrder, setSelectedOrder] = useState<GiftOrder | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [confirmState, setConfirmState] = useState<{ show: boolean; id: number; action: 'approve' | 'reject' }>({ show: false, id: 0, action: 'approve' });
+  const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; action: 'approve' | 'reject' }>({ show: false, id: '', action: 'approve' });
 
   const loadOrders = async () => {
     try {
@@ -114,12 +114,12 @@ export default function GiftOrders() {
 
   const confirmAction = async () => {
     try {
-      await giftApi.updateOrderStatus(String(confirmState.id), confirmState.action === 'approve' ? 'approved' : 'rejected');
+      await giftApi.updateOrderStatus(confirmState.id, confirmState.action === 'approve' ? 'approved' : 'rejected');
       await loadOrders();
     } catch (err) {
       console.error('Failed to update order:', err);
     }
-    setConfirmState({ show: false, id: 0, action: 'approve' });
+    setConfirmState({ show: false, id: '', action: 'approve' });
   };
 
   const activeFilters = [filterStatus !== 'all'].filter(Boolean).length;

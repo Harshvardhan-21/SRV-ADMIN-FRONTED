@@ -127,8 +127,15 @@ export function Redemptions() {
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
     try {
       if (status === 'approved') await redemptionApi.approve(id);
-      else await redemptionApi.reject(id);
+      else await redemptionApi.reject(id, 'Rejected by admin');
       await loadData();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await redemptionApi.delete(id);
+      setData(prev => prev.filter((r: any) => r.id !== id));
     } catch (err) { console.error(err); }
   };
 
@@ -183,6 +190,9 @@ export function Redemptions() {
                   <button onClick={() => updateStatus(r.id, 'approved')} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✅ Approve</button>
                   <button onClick={() => updateStatus(r.id, 'rejected')} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>❌ Reject</button>
                 </div>
+              )}
+              {r.status !== 'pending' && (
+                <button onClick={() => handleDelete(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>🗑 Delete</button>
               )}
             </div>
           );

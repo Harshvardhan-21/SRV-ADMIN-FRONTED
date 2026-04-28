@@ -79,7 +79,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
 
   const handleRejectRedemption = async (id: string) => {
     try {
-      await redemptionApi.reject(id);
+      await redemptionApi.reject(id, 'Rejected by admin');
       setPendingRedemptions(prev => prev.filter(r => r.id !== id));
     } catch (err) { console.error(err); }
   };

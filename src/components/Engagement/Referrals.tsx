@@ -7,7 +7,7 @@ import { referralApi, settingsApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
 interface ReferralRecord {
-  id: number;
+  id: string;
   userName: string;
   phone: string;
   referralCode: string;
@@ -25,7 +25,7 @@ export default function Referrals() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'codes' | 'config'>('codes');
   const [search, setSearch] = useState('');
-  const [deactivateId, setDeactivateId] = useState<number | null>(null);
+  const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [config, setConfig] = useState(INITIAL_CONFIG);
   const [configSaved, setConfigSaved] = useState(false);
   const [configSaving, setConfigSaving] = useState(false);
@@ -50,7 +50,7 @@ export default function Referrals() {
         const res = await referralApi.getAll({ limit: '200' });
         const data = Array.isArray(res) ? res : (res as any).data ?? [];
         setReferrals(data.map((r: any, i: number) => ({
-          id: r.id ?? i + 1,
+          id: r.id ?? String(i + 1),
           userName: r.userName ?? r.user_name ?? r.name ?? 'Unknown',
           phone: r.phone ?? '',
           referralCode: r.referralCode ?? r.referral_code ?? '',
@@ -83,7 +83,7 @@ export default function Referrals() {
   const handleDeactivate = async () => {
     if (deactivateId === null) return;
     try {
-      await referralApi.update(String(deactivateId), { status: 'inactive' });
+      await referralApi.update(deactivateId, { status: 'inactive' });
       setReferrals(prev => prev.map(r => r.id === deactivateId ? { ...r, status: 'inactive' } : r));
     } catch (err) { console.error(err); }
     setDeactivateId(null);

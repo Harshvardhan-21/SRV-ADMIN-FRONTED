@@ -9,7 +9,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface Transfer {
-  id: number;
+  id: string;
   fromName: string;
   fromCode: string;
   toName: string;
@@ -54,8 +54,8 @@ export default function TransferPoints() {
   const [showExport, setShowExport] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [viewItem, setViewItem] = useState<Transfer | null>(null);
-  const [reverseId, setReverseId] = useState<number | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [reverseId, setReverseId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editItem, setEditItem] = useState<Transfer | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
@@ -67,7 +67,7 @@ export default function TransferPoints() {
       const res = await financeApi.getTransferPoints();
       const data = res?.transfers ?? (Array.isArray(res) ? res : (res as any).data ?? []);
       setTransfers(data.map((t: any, i: number) => ({
-        id: t.id ?? i + 1,
+        id: t.id ?? String(i + 1),
         fromName: t.fromName ?? t.from_name ?? (t.description?.split(' to ')?.[0]?.replace('Manual transfer from ', '') ?? 'Admin'),
         fromCode: t.fromCode ?? t.from_code ?? 'ADM',
         toName: t.toName ?? t.to_name ?? (t.description?.split(' to ')?.[1] ?? 'User'),
@@ -118,7 +118,7 @@ export default function TransferPoints() {
   const handleReverse = async () => {
     if (reverseId === null) return;
     try {
-      await financeApi.reverseTransfer(String(reverseId));
+      await financeApi.reverseTransfer(reverseId);
       await loadTransfers();
     } catch (err) {
       console.error('Failed to reverse transfer:', err);
@@ -130,7 +130,7 @@ export default function TransferPoints() {
   const handleDelete = async () => {
     if (deleteId === null) return;
     try {
-      await financeApi.deleteTransfer(String(deleteId));
+      await financeApi.deleteTransfer(deleteId);
       await loadTransfers();
     } catch (err) {
       console.error('Failed to delete transfer:', err);

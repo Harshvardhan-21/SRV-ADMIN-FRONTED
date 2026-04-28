@@ -10,7 +10,7 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 type UserCategory = 'all' | 'electrician' | 'dealer';
 
 interface Testimonial {
-  id: number;
+  id: string;
   personName: string;
   initials: string;
   location: string;
@@ -54,15 +54,15 @@ export default function Testimonials() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const loadTestimonials = async () => {
     try {
       setLoading(true);
-      const res = await testimonialApi.getAll({ limit: '200' });
+      const res = await testimonialApi.getAll();
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
       setTestimonials(data.map((t: any) => ({
         id: t.id,
@@ -120,23 +120,24 @@ export default function Testimonials() {
     if (!form.quote.trim()) { setAlertDialog({ show: true, title: 'Validation Error', message: 'Quote is required!', type: 'error' }); return; }
     try {
       if (editingId !== null) {
-        await testimonialApi.update(String(editingId), form);
+        await testimonialApi.update(editingId, form);
       } else {
         await testimonialApi.create(form);
       }
       await loadTestimonials();
       setAlertDialog({ show: true, title: 'Success', message: editingId !== null ? 'Testimonial updated!' : 'Testimonial added!', type: 'success' });
     } catch (err) {
-      setAlertDialog({ show: true, title: 'Error', message: 'Failed to save testimonial.', type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Failed to save testimonial.';
+      setAlertDialog({ show: true, title: 'Error', message: msg, type: 'error' });
     }
     setShowModal(false);
   };
 
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string) => {
     const t = testimonials.find(x => x.id === id);
     if (!t) return;
     try {
-      await testimonialApi.update(String(id), { isActive: !t.isActive });
+      await testimonialApi.update(id, { isActive: !t.isActive });
       setTestimonials(prev => prev.map(x => x.id === id ? { ...x, isActive: !x.isActive } : x));
     } catch (err) { console.error(err); }
   };
@@ -144,7 +145,7 @@ export default function Testimonials() {
   const handleDelete = async () => {
     if (deleteId === null) return;
     try {
-      await testimonialApi.delete(String(deleteId));
+      await testimonialApi.delete(deleteId);
       setTestimonials(prev => prev.filter(t => t.id !== deleteId));
     } catch (err) { console.error(err); }
     setDeleteId(null);

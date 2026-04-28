@@ -9,7 +9,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 type AdminRole = 'super_admin' | 'admin' | 'staff';
 
 interface AdminUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -46,10 +46,10 @@ export default function AdminSettings() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showPass, setShowPass] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'password'>('users');
   const [saved, setSaved] = useState(false);
   // Editable role permissions state
@@ -108,13 +108,17 @@ export default function AdminSettings() {
     setTimeout(() => setPermSaved(false), 3000);
   };
 
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, boxSizing: 'border-box' };
   const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' };
 
-  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setShowModal(true); };
+  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setSaveError(''); setShowModal(true); };
   const openEdit = (a: AdminUser) => {
     setEditingId(a.id);
     setForm({ name: a.name, email: a.email, phone: a.phone ?? '', role: a.role, password: '', confirmPassword: '', permissions: [...a.permissions] });
+    setSaveError('');
     setShowModal(true);
   };
 
@@ -127,32 +131,56 @@ export default function AdminSettings() {
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.email) return;
+    if (!form.name.trim() || !form.email.trim()) return;
     if (!editingId && form.password !== form.confirmPassword) return;
+    if (!editingId && !form.password.trim()) return;
+
+    setSaving(true);
+    setSaveError('');
     try {
       if (editingId) {
-        await adminApi.update(String(editingId), { name: form.name, email: form.email, role: form.role, phone: form.phone });
-        // If updating own profile, update context and localStorage
-        if (String(editingId) === auth.adminId) {
+        const updatePayload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone || undefined };
+        // Only send password if user typed a new one
+        if (form.password.trim()) updatePayload.password = form.password;
+        await adminApi.update(editingId, updatePayload);
+        if (editingId === auth.adminId) {
           setAdminName(form.name);
         }
       } else {
-        await adminApi.create({ name: form.name, email: form.email, role: form.role, password: form.password, phone: form.phone });
+        await adminApi.create({
+          name: form.name,
+          email: form.email,
+          role: form.role,
+          password: form.password,
+          phone: form.phone || undefined,
+          isActive: true,
+        });
       }
       await loadAdmins();
-    } catch (err) {
+      setShowModal(false);
+    } catch (err: any) {
       console.error('Failed to save admin:', err);
+      // Extract readable error message
+      const msg = err?.message || '';
+      if (msg.includes('already exists') || msg.includes('409')) {
+        setSaveError('An admin with this email already exists.');
+      } else if (msg.includes('400')) {
+        setSaveError('Invalid data. Please check all fields.');
+      } else {
+        setSaveError(msg || 'Failed to save admin. Please try again.');
+      }
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
-  const toggleStatus = async (id: number) => {
+  const toggleStatus = async (id: string) => {
     const admin = admins.find(a => a.id === id);
     if (!admin) return;
-    const newStatus = admin.status === 'active' ? 'inactive' : 'active';
+    const newIsActive = admin.status !== 'active';
     try {
-      await adminApi.update(String(id), { status: newStatus });
-      setAdmins(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+      await adminApi.update(id, { isActive: newIsActive });
+      setAdmins(prev => prev.map(a => a.id === id ? { ...a, status: newIsActive ? 'active' : 'inactive' } : a));
     } catch (err) {
       console.error('Failed to toggle admin status:', err);
     }
@@ -161,7 +189,7 @@ export default function AdminSettings() {
   const handleDelete = async () => {
     if (deleteId) {
       try {
-        await adminApi.delete(String(deleteId));
+        await adminApi.delete(deleteId);
         setAdmins(prev => prev.filter(a => a.id !== deleteId));
       } catch (err) {
         console.error('Failed to delete admin:', err);
@@ -486,6 +514,11 @@ export default function AdminSettings() {
               <button onClick={() => setShowModal(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
             </div>
             <div style={{ padding: '20px 24px', display: 'grid', gap: 14 }}>
+              {saveError && (
+                <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
+                  ❌ {saveError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={lbl}>Full Name *</label>
@@ -542,9 +575,9 @@ export default function AdminSettings() {
               </div>
             </div>
             <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
-              <button onClick={handleSave} disabled={!form.name || !form.email || (!editingId && (form.password !== form.confirmPassword || !form.password))}
-                style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                {editingId ? 'Save Changes' : 'Create Admin'}
+              <button onClick={handleSave} disabled={saving || !form.name || !form.email || (!editingId && (form.password !== form.confirmPassword || !form.password))}
+                style={{ flex: 1, background: saving ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                {saving ? '⏳ Saving...' : editingId ? 'Save Changes' : 'Create Admin'}
               </button>
               <button onClick={() => setShowModal(false)} style={{ flex: 1, background: C.bg, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
             </div>

@@ -43,24 +43,28 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   // Load categories from products API — derive unique categories
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const res = await productApi.getAll({ limit: '500' });
+      const res = await productApi.getAll({ limit: '1000' });
       const products = Array.isArray(res) ? res : (res as any).data ?? [];
-      // Group by category
+      // Group by category — pick the first valid non-empty image for each category
       const catMap = new Map<string, { count: number; image: string; isActive: boolean }>();
       products.forEach((p: any) => {
         const cat = p.category ?? 'Uncategorized';
         if (!catMap.has(cat)) {
-          catMap.set(cat, { count: 0, image: p.image ?? '', isActive: p.isActive ?? true });
+          catMap.set(cat, { count: 0, image: '', isActive: p.isActive ?? true });
         }
         const entry = catMap.get(cat)!;
         entry.count++;
-        if (!entry.image && p.image) entry.image = p.image;
+        // Keep updating image until we find a valid https URL (skip empty/blob/base64)
+        if (!entry.image && p.image && typeof p.image === 'string' && p.image.startsWith('https://')) {
+          entry.image = p.image;
+        }
       });
       const derived: Category[] = Array.from(catMap.entries()).map(([name, val], i) => ({
         id: i + 1,
@@ -522,14 +526,23 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
                     padding: '9px 12px', borderRadius: 8,
                     border: `1px solid ${C.border}`,
                     background: C.bg, color: C.muted,
-                    cursor: 'pointer', fontSize: 12,
+                    cursor: imageUploading ? 'not-allowed' : 'pointer', fontSize: 12,
                     display: 'flex', alignItems: 'center', gap: 5,
                     whiteSpace: 'nowrap' as const,
                   }}>
-                    <Upload size={13} /> Upload
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                    <Upload size={13} /> {imageUploading ? 'Uploading...' : 'Upload'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={imageUploading} onChange={async (e) => {
                       const file = e.target.files?.[0];
-                      if (file) setForm(f => ({ ...f, image: URL.createObjectURL(file) }));
+                      if (!file) return;
+                      setImageUploading(true);
+                      try {
+                        const url = await productApi.uploadImage(file);
+                        setForm(f => ({ ...f, image: url }));
+                      } catch {
+                        setAlertDialog({ show: true, title: 'Upload Failed', message: 'Failed to upload image. Please try again.', type: 'error' });
+                      } finally {
+                        setImageUploading(false);
+                      }
                     }} />
                   </label>
                 </div>
@@ -598,14 +611,15 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
               </button>
               <button
                 onClick={handleSave}
+                disabled={imageUploading}
                 style={{
                   padding: '9px 20px', borderRadius: 8,
                   border: 'none',
-                  background: C.red, color: '#fff',
-                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  background: imageUploading ? C.muted : C.red, color: '#fff',
+                  fontSize: 13, fontWeight: 600, cursor: imageUploading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {editingId !== null ? 'Save Changes' : 'Add Category'}
+                {imageUploading ? '⏳ Uploading...' : editingId !== null ? 'Save Changes' : 'Add Category'}
               </button>
             </div>
           </div>

@@ -8,7 +8,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface NotificationRecord {
-  id: number;
+  id: string;
   title: string;
   body: string;
   target: string;
@@ -33,7 +33,7 @@ export default function NotificationsPage() {
   const [editForm, setEditForm] = useState({ title: '', body: '', target: 'All Users', type: 'General', status: 'sent' as NotificationRecord['status'] });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   // Specific user search state
@@ -133,7 +133,7 @@ export default function NotificationsPage() {
   const handleEditSave = async () => {
     if (!editItem || !editForm.title.trim() || !editForm.body.trim()) return;
     try {
-      await notificationApi.update(String(editItem.id), {
+      await notificationApi.update(editItem.id, {
         title: editForm.title,
         message: editForm.body,
         targetRole: editForm.target,
@@ -150,7 +150,7 @@ export default function NotificationsPage() {
   const handleDelete = async () => {
     if (deleteId === null) return;
     try {
-      await notificationApi.delete(String(deleteId));
+      await notificationApi.delete(deleteId);
       setNotifications(prev => prev.filter(n => n.id !== deleteId));
     } catch (err) {
       setAlertDialog({ show: true, title: 'Error', message: 'Failed to delete notification.', type: 'error' });

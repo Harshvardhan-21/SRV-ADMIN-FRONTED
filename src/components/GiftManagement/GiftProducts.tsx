@@ -8,7 +8,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface GiftProduct {
-  id: number;
+  id: string;
   name: string;
   image: string;
   pointsRequired: number;
@@ -17,7 +17,7 @@ interface GiftProduct {
   type: 'electrician' | 'dealer';
 }
 
-function AddGiftModal({ type, nextId, onClose, onSave, C }: { type: 'electrician' | 'dealer'; nextId: number; onClose: () => void; onSave: (g: GiftProduct) => void; C: any }) {
+function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dealer'; onClose: () => void; onSave: (g: Omit<GiftProduct, 'id'>) => void; C: any }) {
   const [form, setForm] = useState({ name: '', image: '', pointsRequired: 500, stock: 10 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const imgRef = useRef<HTMLInputElement>(null);
@@ -37,7 +37,7 @@ function AddGiftModal({ type, nextId, onClose, onSave, C }: { type: 'electrician
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Add Gift Product</div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>ID will be #{nextId}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>New gift product</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
         </div>
@@ -74,7 +74,7 @@ function AddGiftModal({ type, nextId, onClose, onSave, C }: { type: 'electrician
               setAlertDialog({ show: true, title: 'Required Fields Missing', message: 'Please fill all required fields (Gift Name)', type: 'error' });
               return;
             }
-            onSave({ id: nextId, ...form, status: 'active', type }); 
+            onSave({ ...form, status: 'active', type }); 
           }} disabled={!form.name}
             style={{ flex: 1, background: form.name ? 'linear-gradient(135deg, #10B981, #059669)' : C.border, color: 'white', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: form.name ? 'pointer' : 'not-allowed' }}>
             Add Gift
@@ -173,7 +173,7 @@ export default function GiftProducts() {
   const [editGift, setEditGift] = useState<GiftProduct | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [confirmState, setConfirmState] = useState<{ show: boolean; id: number }>({ show: false, id: 0 });
+  const [confirmState, setConfirmState] = useState<{ show: boolean; id: string }>({ show: false, id: '' });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const loadGifts = async () => {
@@ -205,14 +205,12 @@ export default function GiftProducts() {
     (search === '' || g.name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const nextId = Math.max(...gifts.map(g => g.id), 0) + 1;
-
-  const toggleStatus = async (id: number) => {
+  const toggleStatus = async (id: string) => {
     const gift = gifts.find(g => g.id === id);
     if (!gift) return;
     const newStatus = gift.status === 'active' ? 'inactive' : 'active';
     try {
-      await giftApi.update(String(id), { status: newStatus });
+      await giftApi.update(id, { status: newStatus });
       setGifts(prev => prev.map(g => g.id === id ? { ...g, status: newStatus } : g));
     } catch (err) {
       console.error('Failed to update gift status:', err);
@@ -221,20 +219,20 @@ export default function GiftProducts() {
 
   const confirmDelete = async () => {
     try {
-      await giftApi.delete(String(confirmState.id));
+      await giftApi.delete(confirmState.id);
       setGifts(prev => prev.filter(g => g.id !== confirmState.id));
     } catch (err) {
       console.error('Failed to delete gift:', err);
     }
-    setConfirmState({ show: false, id: 0 });
+    setConfirmState({ show: false, id: '' });
   };
 
   const inputStyle: React.CSSProperties = { padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <ConfirmDialog show={confirmState.show} title="Remove Gift" message="Are you sure you want to remove this gift product?" onConfirm={confirmDelete} onCancel={() => setConfirmState({ show: false, id: 0 })} type="danger" />
-      {showAdd && <AddGiftModal type={tab} nextId={nextId} onClose={() => setShowAdd(false)} onSave={async (g) => {
+      <ConfirmDialog show={confirmState.show} title="Remove Gift" message="Are you sure you want to remove this gift product?" onConfirm={confirmDelete} onCancel={() => setConfirmState({ show: false, id: '' })} type="danger" />
+      {showAdd && <AddGiftModal type={tab} onClose={() => setShowAdd(false)} onSave={async (g) => {
         try {
           await giftApi.create({ name: g.name, image: g.image, pointsRequired: g.pointsRequired, stock: g.stock, status: g.status, type: g.type });
           await loadGifts();
@@ -243,7 +241,7 @@ export default function GiftProducts() {
       }} C={C} />}
       {editGift && <EditGiftModal gift={editGift} onClose={() => setEditGift(null)} onSave={async (g) => {
         try {
-          await giftApi.update(String(g.id), { name: g.name, image: g.image, pointsRequired: g.pointsRequired, stock: g.stock, status: g.status, type: g.type });
+          await giftApi.update(g.id, { name: g.name, image: g.image, pointsRequired: g.pointsRequired, stock: g.stock, status: g.status, type: g.type });
           await loadGifts();
         } catch (err) { console.error('Failed to update gift:', err); }
         setEditGift(null);
