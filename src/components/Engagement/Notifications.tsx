@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Search, Bell, Eye, Send, Pencil, Trash2, User } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { notificationApi, userSearchApi } from '@/lib/api';
@@ -59,7 +60,7 @@ export default function NotificationsPage() {
     }
   };
 
-  useEffect(() => { loadNotifications(); }, []);
+  usePolling(loadNotifications, 15000);
 
   // Debounced user search
   useEffect(() => {

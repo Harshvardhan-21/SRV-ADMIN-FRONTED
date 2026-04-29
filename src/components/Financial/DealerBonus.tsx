@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Upload, DollarSign, Check, Pencil } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { financeApi, settingsApi } from '@/lib/api';
@@ -26,7 +27,7 @@ export default function DealerBonus() {
   const [bonuses, setBonuses] = useState<BonusRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadBonuses = useCallback(() => {
     financeApi.getDealerBonus().then((res: any) => {
       const dealers = res?.dealers ?? [];
       setBonuses(dealers.map((d: any, i: number) => ({
@@ -42,6 +43,8 @@ export default function DealerBonus() {
       })));
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  usePolling(loadBonuses, 15000);
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [dealerFilter, setDealerFilter] = useState('');

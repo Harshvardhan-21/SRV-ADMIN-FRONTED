@@ -2,7 +2,16 @@
 import { useState, useEffect } from 'react';
 import { Smartphone, Save, ToggleLeft, ToggleRight, Bell, Star, Gift, Shield, Globe, Zap } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { electricianApi, dealerApi, settingsApi } from '@/lib/api';
+import { electricianApi, dealerApi, settingsApi, notificationApi } from '@/lib/api';
+
+// Toggle component defined outside to avoid "component created during render" lint error
+function Toggle({ value, onChange, muted }: { value: boolean; onChange: (v: boolean) => void; muted: string }) {
+  return (
+    <button onClick={() => onChange(!value)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: value ? '#10B981' : muted, padding: 0 }}>
+      {value ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+    </button>
+  );
+}
 
 interface AppConfig {
   // App Info
@@ -133,34 +142,42 @@ export default function AppSettings() {
     }
   };
   
-  const handleSendNotification = () => {
-    // Here you would integrate with your push notification service (Firebase, OneSignal, etc.)
-    console.log('Sending notification:', {
-      target: notificationTarget,
-      title: notificationTitle,
-      message: notificationMessage,
-      user: selectedUser
-    });
-    
-    setNotificationSent(true);
-    setTimeout(() => {
-      setNotificationSent(false);
+  const handleSendNotification = async () => {
+    try {
+      const targetRole =
+        notificationTarget === 'electricians'
+          ? 'electrician'
+          : notificationTarget === 'dealers'
+            ? 'dealer'
+            : 'all';
+
+      const created = await notificationApi.create({
+        title: notificationTitle,
+        message: notificationMessage,
+        targetRole,
+        targetUserIds: notificationTarget === 'specific' && selectedUser ? [selectedUser.id] : undefined,
+        status: 'draft',
+      });
+
+      if (created?.id) {
+        await notificationApi.send(created.id);
+      }
+
+      setNotificationSent(true);
+      setTimeout(() => setNotificationSent(false), 3000);
       setNotificationTitle('');
       setNotificationMessage('');
       setSpecificUserSearch('');
       setSelectedUser(null);
       setSearchResults([]);
-    }, 3000);
+    } catch (err) {
+      console.error('Notification send failed:', err);
+      alert('Failed to send notification. Please try again.');
+    }
   };
 
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, boxSizing: 'border-box' };
   const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' };
-
-  const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-    <button onClick={() => onChange(!value)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: value ? '#10B981' : C.muted, padding: 0 }}>
-      {value ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-    </button>
-  );
 
   const sections = [
     { id: 'app', label: '📱 App Info', Icon: Smartphone },
@@ -239,7 +256,7 @@ export default function AppSettings() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Force Update</div>
                     <div style={{ fontSize: 12, color: C.muted }}>Force users to update to minimum version</div>
                   </div>
-                  <Toggle value={config.forceUpdate} onChange={v => f('forceUpdate', v)} />
+                  <Toggle value={config.forceUpdate} onChange={v => f('forceUpdate', v)} muted={C.muted} />
                 </div>
               </div>
               <div style={{ padding: '16px', background: config.maintenanceMode ? '#FEF2F2' : C.bg, borderRadius: 12, border: `1px solid ${config.maintenanceMode ? '#FCA5A5' : C.border}` }}>
@@ -248,7 +265,7 @@ export default function AppSettings() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: config.maintenanceMode ? '#DC2626' : C.text }}>🔧 Maintenance Mode</div>
                     <div style={{ fontSize: 12, color: C.muted }}>Show maintenance screen to all app users</div>
                   </div>
-                  <Toggle value={config.maintenanceMode} onChange={v => f('maintenanceMode', v)} />
+                  <Toggle value={config.maintenanceMode} onChange={v => f('maintenanceMode', v)} muted={C.muted} />
                 </div>
                 {config.maintenanceMode && (
                   <div><label style={lbl}>Maintenance Message</label><input style={inp} value={config.maintenanceMessage} onChange={e => f('maintenanceMessage', e.target.value)} /></div>
@@ -326,7 +343,7 @@ export default function AppSettings() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{item.label}</div>
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{item.desc}</div>
                   </div>
-                  <Toggle value={(config as any)[item.key]} onChange={v => f(item.key as keyof AppConfig, v)} />
+                  <Toggle value={(config as any)[item.key]} onChange={v => f(item.key as keyof AppConfig, v)} muted={C.muted} />
                 </div>
               ))}
             </div>
@@ -355,7 +372,7 @@ export default function AppSettings() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Enable Rate Us Prompt</div>
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Show rating prompt to users in the app</div>
                   </div>
-                  <Toggle value={config.rateUsEnabled} onChange={v => f('rateUsEnabled', v)} />
+                  <Toggle value={config.rateUsEnabled} onChange={v => f('rateUsEnabled', v)} muted={C.muted} />
                 </div>
 
                 <div>

@@ -7,7 +7,7 @@ import {
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageSquare, FileText, Megaphone,
-  UserCheck, ClipboardList, Shield, Smartphone,
+  UserCheck, ClipboardList, Shield, Smartphone, CalendarDays,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -64,6 +64,8 @@ const NAV_GROUPS = [
     label: 'Content',
     items: [
       { id: 'banners', label: 'Banners', Icon: ImageIcon },
+      { id: 'reward-schemes', label: 'Reward Schemes', Icon: Gift },
+      { id: 'festivals', label: 'Festivals', Icon: CalendarDays },
       { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
       { id: 'privacy-policy', label: 'Privacy Policy', Icon: FileText },
       { id: 'promo-section', label: 'Promo Section', Icon: Megaphone },

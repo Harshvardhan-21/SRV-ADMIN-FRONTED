@@ -1,0 +1,13 @@
+
+> srv-admin@0.1.0 dev
+> next dev --webpack --port 3000
+
+▲ Next.js 16.2.4 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.21.0.1:3000
+- Environments: .env.local
+✓ Ready in 896ms
+
+○ Compiling / ...
+ GET / 200 in 5.3s (next.js: 4.8s, application-code: 485ms)
+[?25h

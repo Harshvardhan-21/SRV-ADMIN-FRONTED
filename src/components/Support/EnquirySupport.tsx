@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { MessageSquare, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { supportApi } from '@/lib/api';
@@ -67,7 +68,7 @@ export default function EnquirySupport() {
     }
   };
 
-  useEffect(() => { loadEnquiries(); }, []);
+  usePolling(loadEnquiries, 15000);
 
   const handleSendReply = async () => {
     if (!selectedEnquiry || !replyMessage.trim()) return;

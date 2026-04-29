@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, X, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -282,7 +283,7 @@ export default function Dealers({ role }: DealersProps) {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  usePolling(loadData, 15000);
 
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');

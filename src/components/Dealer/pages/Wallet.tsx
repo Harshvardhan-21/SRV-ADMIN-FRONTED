@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { usePolling } from '@/lib/usePolling';
 import { Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { walletApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -25,11 +26,13 @@ export default function WalletHistory() {
   const [filterType, setFilterType] = useState('all');
   const [showExport, setShowExport] = useState(false);
 
-  useEffect(() => {
+  const loadWallet = useCallback(() => {
     walletApi.getTransactions({ userRole: 'dealer', limit: '500' }).then(res => {
       setTransactions(Array.isArray(res) ? res : (res as any).data ?? []);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  usePolling(loadWallet, 15000);
 
   const filtered = transactions.filter(t =>
     filterType === 'all' || t.type === filterType

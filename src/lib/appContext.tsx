@@ -144,12 +144,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { role, name: res.admin.name };
   };
 
-  const logout = useCallback(async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
+  const logout = useCallback(() => {
+    const token = getToken();
     removeToken();
     setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
     setProducts([]);
     setPointsConfig([]);
+    void authApi.logout(token);
   }, []);
 
   const refreshProducts = useCallback(async () => {
