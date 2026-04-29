@@ -581,6 +581,7 @@ export function AppBanners() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<BannerItem>>({ title: '', imageUrl: '', targetRole: 'all', status: 'active', order: 1 });
   const f = (k: keyof BannerItem, v: unknown) => setForm(p => ({ ...p, [k]: v }));
 
@@ -594,11 +595,39 @@ export function AppBanners() {
 
   useEffect(() => { loadData(); }, []);
 
-  const handleAdd = async () => {
+  const openAdd = () => {
+    setEditingId(null);
+    setForm({ title: '', imageUrl: '', targetRole: 'all', status: 'active', order: data.length + 1 });
+    setShowForm(true);
+  };
+
+  const openEdit = (b: any) => {
+    setEditingId(b.id);
+    setForm({
+      title: b.title ?? '',
+      imageUrl: b.imageUrl ?? '',
+      targetRole: Array.isArray(b.targetRole) ? (b.targetRole[0] ?? 'all') : (b.targetRole ?? 'all'),
+      status: b.status ?? 'active',
+      order: b.order ?? 1,
+    });
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
     try {
-      await bannerApi.create({ ...form, createdAt: new Date().toISOString().split('T')[0] });
+      const payload = {
+        ...form,
+        isActive: form.status !== 'inactive',
+      };
+      if (editingId) {
+        await bannerApi.update(editingId, payload as any);
+      } else {
+        await bannerApi.create({ ...payload, createdAt: new Date().toISOString().split('T')[0] } as any);
+      }
       await loadData();
       setShowForm(false);
+      setEditingId(null);
+      setForm({ title: '', imageUrl: '', targetRole: 'all', status: 'active', order: 1 });
     } catch (err) { console.error(err); }
   };
 
@@ -606,16 +635,24 @@ export function AppBanners() {
     const banner = data.find((b: any) => b.id === id);
     if (!banner) return;
     try {
-      await bannerApi.update(id, { status: banner.status === 'active' ? 'inactive' : 'active' });
-      setData(prev => prev.map((b: any) => b.id === id ? { ...b, status: b.status === 'active' ? 'inactive' : 'active' } : b));
+      const newStatus = banner.status === 'active' ? 'inactive' : 'active';
+      await bannerApi.update(id, { status: newStatus, isActive: newStatus === 'active' } as any);
+      setData(prev => prev.map((b: any) => b.id === id ? { ...b, status: newStatus, isActive: newStatus === 'active' } : b));
     } catch (err) { console.error(err); }
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this banner?')) return;
     try {
       await bannerApi.delete(id);
       setData(prev => prev.filter((b: any) => b.id !== id));
     } catch (err) { console.error(err); }
+  };
+
+  const displayRole = (r: any) => {
+    if (!r || r === 'all' || (Array.isArray(r) && r.length === 0)) return 'Everyone';
+    if (Array.isArray(r)) return r.join(', ');
+    return r;
   };
 
   return (
@@ -623,17 +660,17 @@ export function AppBanners() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🖼️ App Banners</h1>
-          <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional banners displayed in the mobile app</p>
+          <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional banners displayed in the mobile app. Changes reflect in the app within 30 seconds.</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ Add Banner</button>
+        <button onClick={openAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ Add Banner</button>
       </div>
 
       {showForm && (
         <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>🖼️ New Banner</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>{editingId ? '✏️ Edit Banner' : '🖼️ New Banner'}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Banner Title *</label><input style={inputStyle} value={form.title ?? ''} onChange={e => f('title', e.target.value)} placeholder="Banner title" /></div>
-            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Image URL *</label><input style={inputStyle} value={form.imageUrl ?? ''} onChange={e => f('imageUrl', e.target.value)} placeholder="https://..." /></div>
+            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Image URL *</label><input style={inputStyle} value={form.imageUrl ?? ''} onChange={e => f('imageUrl', e.target.value)} placeholder="https://example.com/banner.jpg" /></div>
             <div><label style={labelStyle}>Target Audience</label>
               <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                 <option value="all">Everyone</option>
@@ -642,39 +679,60 @@ export function AppBanners() {
               </select>
             </div>
             <div><label style={labelStyle}>Display Order</label><input style={inputStyle} type="number" value={form.order ?? 1} onChange={e => f('order', +e.target.value)} /></div>
+            <div><label style={labelStyle}>Status</label>
+              <select style={inputStyle} value={form.status ?? 'active'} onChange={e => f('status', e.target.value)}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
           {form.imageUrl && (
             <div style={{ marginTop: 14, background: C.bg, borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'center' }}>
-              <img src={form.imageUrl} alt="Preview" style={{ maxWidth: 300, maxHeight: 120, objectFit: 'contain', borderRadius: 8 }} onError={e => (e.currentTarget.style.display = 'none')} />
+              <img src={form.imageUrl} alt="Preview" style={{ maxWidth: 320, maxHeight: 130, objectFit: 'contain', borderRadius: 8 }} onError={e => (e.currentTarget.style.display = 'none')} />
             </div>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-            <button onClick={handleAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>✅ Add Banner</button>
-            <button onClick={() => setShowForm(false)} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleSave} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>{editingId ? '💾 Save Changes' : '✅ Add Banner'}</button>
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-        {data.map(b => (
-          <div key={b.id} style={{ background: C.card, borderRadius: 18, overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-            <div style={{ height: 140, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <img src={b.imageUrl} alt={b.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-            </div>
-            <div style={{ padding: '14px 18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{b.title}</div>
-                <span style={{ background: b.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: b.status === 'active' ? '#065F46' : '#991B1B', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>{b.status}</span>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading banners...</div>
+      ) : data.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: C.muted, background: C.card, borderRadius: 16, border: `1px dashed ${C.border}` }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🖼️</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No banners yet</div>
+          <div style={{ fontSize: 13 }}>Add your first banner to display it in the app</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+          {data.map(b => (
+            <div key={b.id} style={{ background: C.card, borderRadius: 18, overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ height: 140, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                {b.imageUrl ? (
+                  <img src={b.imageUrl} alt={b.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.currentTarget as HTMLImageElement).src = ''; (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                ) : (
+                  <div style={{ color: C.muted, fontSize: 13 }}>No image</div>
+                )}
               </div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>🎯 {b.targetRole === 'all' ? 'Everyone' : b.targetRole} · Order #{b.order} · {b.createdAt}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => toggleStatus(b.id)} style={{ flex: 1, background: b.status === 'active' ? '#FEE2E2' : '#D1FAE5', color: b.status === 'active' ? '#991B1B' : '#065F46', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{b.status === 'active' ? '🚫 Deactivate' : '✅ Activate'}</button>
-                <button onClick={() => handleDelete(b.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🗑</button>
+              <div style={{ padding: '14px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, flex: 1, marginRight: 8 }}>{b.title}</div>
+                  <span style={{ background: b.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: b.status === 'active' ? '#065F46' : '#991B1B', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>{b.status}</span>
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>🎯 {displayRole(b.targetRole)} · Order #{b.order}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => openEdit(b)} style={{ flex: 1, background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✏️ Edit</button>
+                  <button onClick={() => toggleStatus(b.id)} style={{ flex: 1, background: b.status === 'active' ? '#FEE2E2' : '#D1FAE5', color: b.status === 'active' ? '#991B1B' : '#065F46', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{b.status === 'active' ? '🚫 Deactivate' : '✅ Activate'}</button>
+                  <button onClick={() => handleDelete(b.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🗑</button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

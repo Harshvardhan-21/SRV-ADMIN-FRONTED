@@ -54,13 +54,36 @@ async function request<T>(
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
+const withMinimumLimit = (params: Record<string, string> | undefined, minimumLimit: number) => {
+  const nextParams = { ...(params ?? {}) };
+  const requestedLimit = Number(nextParams.limit ?? '0');
+  if (!Number.isFinite(requestedLimit) || requestedLimit < minimumLimit) {
+    nextParams.limit = String(minimumLimit);
+  }
+  return nextParams;
+};
+
 export const authApi = {
   login: (email: string, password: string) =>
     request<{ accessToken: string; refreshToken: string; admin: { id: string; email: string; name: string; role: string } }>(
       '/auth/login',
       { method: 'POST', body: JSON.stringify({ email, password }) }
     ),
-  logout: () => request('/auth/logout', { method: 'POST' }),
+  logout: async (tokenOverride?: string | null) => {
+    const token = tokenOverride ?? getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const res = await fetch(`${BASE_URL}/auth/logout`, { method: 'POST', headers });
+      if (!res.ok && res.status !== 401) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || `Request failed: ${res.status}`);
+      }
+    } catch {
+      // Local logout should still succeed even if backend is unavailable.
+    }
+  },
   profile: () => request<{ id: string; email: string; name: string; role: string }>('/auth/profile'),
 };
 
@@ -79,7 +102,7 @@ export const adminApi = {
 // ─── Electricians ─────────────────────────────────────────────────────────────
 export const electricianApi = {
   getAll: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    const q = '?' + new URLSearchParams(withMinimumLimit(params, 5000)).toString();
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/electricians${q}`);
   },
   getOne: (id: string) => request<any>(`/electricians/${id}`),
@@ -93,7 +116,7 @@ export const electricianApi = {
 // ─── Dealers ──────────────────────────────────────────────────────────────────
 export const dealerApi = {
   getAll: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    const q = '?' + new URLSearchParams(withMinimumLimit(params, 2000)).toString();
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers${q}`);
   },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
@@ -107,7 +130,7 @@ export const dealerApi = {
 // ─── Products ─────────────────────────────────────────────────────────────────
 export const productApi = {
   getAll: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    const q = '?' + new URLSearchParams(withMinimumLimit(params, 1000)).toString();
     return request<{ data: any[]; total: number }>(`/products${q}`);
   },
   getOne: (id: string) => request<any>(`/products/${id}`),
