@@ -7,6 +7,7 @@ import { getPermissions } from '@/lib/permissions';
 import { useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import ExportModal from '@/components/Shared/ExportModal';
 
 interface DealersProps {
   role: AdminRole;
@@ -358,6 +359,7 @@ export default function Dealers({ role }: DealersProps) {
     };
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [viewing, setViewing] = useState<Dealer | null>(null);
   const [editing, setEditing] = useState<Dealer | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
@@ -444,10 +446,39 @@ export default function Dealers({ role }: DealersProps) {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Store size={24} style={{ color: C.red }} /> Dealers</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage dealer network, tiers, targets and linked electricians</p>
         </div>
-        {permissions.canCreate && (
-          <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Dealer</button>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            📤 Export
+          </button>
+          {permissions.canCreate && (
+            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Dealer</button>
+          )}
+        </div>
       </div>
+
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="All Dealers"
+        fileName="dealers"
+        getData={() => data.map(d => ({
+          Name: d.name,
+          Phone: d.phone,
+          Email: d.email ?? '',
+          DealerCode: d.dealerCode,
+          Town: d.town,
+          District: d.district,
+          State: d.state,
+          Tier: d.tier,
+          Status: d.status,
+          ElectricianCount: d.electricianCount,
+          MonthlyTarget: d.monthlyTarget ?? 0,
+          AchievedTarget: d.achievedTarget ?? 0,
+          GSTNumber: d.gstNumber ?? '',
+          BankLinked: d.bankLinked ? 'Yes' : 'No',
+          JoinedDate: new Date(d.joinedDate).toLocaleDateString('en-IN'),
+        }))}
+      />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>

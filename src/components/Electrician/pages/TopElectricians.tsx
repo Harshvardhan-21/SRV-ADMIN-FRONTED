@@ -55,6 +55,7 @@ export default function TopElectricians() {
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
   const [allElectricians, setAllElectricians] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     electricianApi.getAll({ limit: '500' }).then(res => {
@@ -63,7 +64,6 @@ export default function TopElectricians() {
   }, []);
 
   const topList = useMemo(() => getFilteredData(allElectricians, range, fromDate, toDate, sortBy), [allElectricians, range, fromDate, toDate, sortBy]);
-
   const maxVal = topList[0]
     ? sortBy === 'points' ? topList[0].periodPoints
     : sortBy === 'scans' ? topList[0].periodScans
@@ -82,6 +82,25 @@ export default function TopElectricians() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="Top Electricians"
+        fileName="top-electricians"
+        getData={() => topList.map((e, idx) => ({
+          Rank: idx + 1,
+          Name: e.name,
+          Phone: e.phone,
+          Code: e.electricianCode,
+          City: e.city,
+          State: e.state,
+          Tier: e.tier,
+          PeriodPoints: e.periodPoints,
+          PeriodScans: e.periodScans,
+          PeriodRedemptions: e.periodRedemptions,
+          WalletBalance: e.walletBalance,
+        }))}
+      />
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, #F59E0B, #D97706)`, borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(245,158,11,0.25)' }}>
         <div>
@@ -92,7 +111,12 @@ export default function TopElectricians() {
             {rangeLabels[range]} — Top 10 performers by {sortBy}
           </div>
         </div>
-        <div style={{ fontSize: 40, fontWeight: 900, color: 'rgba(255,255,255,0.2)' }}>🏆</div>
+        <button
+          onClick={() => setShowExport(true)}
+          style={{ background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          📤 Export
+        </button>
       </div>
 
       {/* Filters */}

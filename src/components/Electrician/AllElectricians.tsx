@@ -7,6 +7,7 @@ import { getPermissions } from '@/lib/permissions';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import ExportModal from '@/components/Shared/ExportModal';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -227,19 +228,16 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   style={{ ...inputStyle, flex: 1, background: C.bg, color: C.text, fontFamily: 'monospace', fontWeight: 700 }}
-                  value={form.electricianCode ?? ''}
+                  value={isAdd ? (form.dealerId ? `${dealers.find(d => d.id === form.dealerId)?.dealerCode ?? '??????'}-###` : 'Auto-generated') : (form.electricianCode ?? '')}
                   readOnly
                   placeholder="Auto-generated"
                 />
-                <button
-                  type="button"
-                  onClick={() => f('electricianCode', generateCode())}
-                  style={{ padding: '0 14px', background: C.red, color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-                >
-                  🔄 Generate
-                </button>
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Auto-generated unique code. Click to regenerate.</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+                {isAdd
+                  ? (form.dealerId ? `Will be: ${dealers.find(d => d.id === form.dealerId)?.dealerCode}-001, 002... (auto-assigned by server)` : 'Select a dealer to auto-generate code in format DDDDDD-EEE')
+                  : 'Electrician code (read-only)'}
+              </div>
             </div>
             <div>
               <label style={labelStyle}>Category</label>
@@ -429,6 +427,7 @@ export default function Electricians({ role }: ElectriciansProps) {
     };
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
@@ -460,7 +459,9 @@ export default function Electricians({ role }: ElectriciansProps) {
       city: form.city,
       state: form.state,
       district: form.district,
-      electricianCode: form.electricianCode,
+      // For new electricians, don't send electricianCode — backend auto-generates it
+      // as {dealerCode}-{serial}. For edits, preserve existing code.
+      ...(showAdd ? {} : { electricianCode: form.electricianCode }),
       tier: form.tier,
       status: form.status,
       dealerId: form.dealerId && form.dealerId.trim() !== '' ? form.dealerId : undefined,
@@ -516,12 +517,41 @@ export default function Electricians({ role }: ElectriciansProps) {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>⚡ Electricians</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage all registered electricians, tiers and points</p>
         </div>
-        {permissions.canCreate && (
-          <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            ＋ Add Electrician
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            📤 Export
           </button>
-        )}
+          {permissions.canCreate && (
+            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              ＋ Add Electrician
+            </button>
+          )}
+        </div>
       </div>
+
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="All Electricians"
+        fileName="electricians"
+        getData={() => data.map(e => ({
+          Name: e.name,
+          Phone: e.phone,
+          Email: e.email ?? '',
+          Code: e.electricianCode,
+          City: e.city,
+          District: e.district,
+          State: e.state,
+          Tier: e.tier,
+          Status: e.status,
+          Dealer: e.dealerName ?? '',
+          TotalPoints: e.totalPoints,
+          WalletBalance: e.walletBalance,
+          TotalScans: e.totalScans,
+          BankLinked: e.bankLinked ? 'Yes' : 'No',
+          JoinedDate: new Date(e.joinedDate).toLocaleDateString('en-IN'),
+        }))}
+      />
 
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>

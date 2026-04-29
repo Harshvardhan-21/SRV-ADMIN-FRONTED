@@ -15,6 +15,7 @@ interface ExportModalProps {
 export default function ExportModal({ show, onClose, title, getData, fileName }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
+  const mouseDownInside = React.useRef(false);
 
   if (!show) return null;
 
@@ -89,8 +90,6 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
     { key: 'pdf',   label: 'PDF',   desc: 'Printable document', icon: '📋', color: '#B91C1C', bg: '#FEE2E2', bdr: '#FCA5A5' },
     { key: 'zip',   label: 'ZIP',   desc: 'Excel + CSV bundle', icon: '🗜️', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
   ];
-
-  const mouseDownInside = React.useRef(false);
 
   return (
     <div

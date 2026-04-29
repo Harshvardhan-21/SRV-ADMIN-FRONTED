@@ -17,7 +17,7 @@ interface Offer {
   discount: string;
   validFrom: string;
   validTo: string;
-  status: 'active' | 'scheduled' | 'expired';
+  status: 'active' | 'scheduled' | 'expired' | 'inactive';
   targetRole: string;
   bonusPoints: number;
 }
@@ -199,6 +199,7 @@ export default function ElectricianOffers() {
           <option value="active">Active</option>
           <option value="scheduled">Scheduled</option>
           <option value="expired">Expired</option>
+          <option value="inactive">Inactive</option>
         </select>
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
       </div>
@@ -215,7 +216,13 @@ export default function ElectricianOffers() {
           </thead>
           <tbody>
             {filtered.map(offer => {
-              const status = { active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' }, scheduled: { bg: '#EFF6FF', color: '#1D4ED8', label: 'Scheduled' }, expired: { bg: '#FEE2E2', color: '#991B1B', label: 'Expired' } }[offer.status];
+              const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
+                active:    { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
+                scheduled: { bg: '#EFF6FF', color: '#1D4ED8', label: 'Scheduled' },
+                expired:   { bg: '#FEE2E2', color: '#991B1B', label: 'Expired' },
+                inactive:  { bg: '#F3F4F6', color: '#6B7280', label: 'Inactive' },
+              };
+              const status = STATUS_MAP[offer.status] ?? { bg: '#F3F4F6', color: '#6B7280', label: offer.status ?? 'Unknown' };
               return (
                 <tr key={offer.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 16px' }}>
@@ -281,6 +288,7 @@ export default function ElectricianOffers() {
                     <option value="active">Active</option>
                     <option value="scheduled">Scheduled</option>
                     <option value="expired">Expired</option>
+                    <option value="inactive">Inactive</option>
                   </select>
                 </div>
                 <div>

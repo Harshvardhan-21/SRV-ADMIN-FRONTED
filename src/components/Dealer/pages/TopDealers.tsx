@@ -27,6 +27,7 @@ export default function TopDealers() {
   const [sortBy] = useState<SortBy>('electricians');
   const [fromDate, setFromDate] = useState('2024-01-01');
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     dealerApi.getAll({ limit: '500' }).then(res => {
@@ -68,6 +69,25 @@ export default function TopDealers() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="Top Dealers"
+        fileName="top-dealers"
+        getData={() => topList.map((d, idx) => ({
+          Rank: idx + 1,
+          Name: d.name,
+          Phone: d.phone,
+          DealerCode: d.dealerCode,
+          Town: d.town,
+          State: d.state,
+          Tier: d.tier,
+          TotalElectricians: d.electricianCount,
+          PeriodElectricians: d.periodElectricians,
+          MonthlyTarget: d.monthlyTarget ?? 0,
+          AchievedTarget: d.achievedTarget ?? 0,
+        }))}
+      />
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(59,130,246,0.25)' }}>
         <div>
@@ -78,7 +98,12 @@ export default function TopDealers() {
             {rangeLabels[range]} — Top 10 by Electricians Added
           </div>
         </div>
-        <div style={{ fontSize: 40, fontWeight: 900, color: 'rgba(255,255,255,0.2)' }}><Store size={40} /></div>
+        <button
+          onClick={() => setShowExport(true)}
+          style={{ background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          📤 Export
+        </button>
       </div>
 
       {/* Filters */}
