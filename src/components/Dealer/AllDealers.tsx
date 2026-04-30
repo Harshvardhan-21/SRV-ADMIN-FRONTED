@@ -304,11 +304,16 @@ export default function Dealers({ role }: DealersProps) {
 
   // ── Stats (fetched separately for accurate totals across all pages) ──
   const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
+  const [allStates, setAllStates] = useState<string[]>([]);
 
   const loadStats = async () => {
     try {
-      const stats = await dealerApi.getStats();
+      const [stats, statesRes] = await Promise.all([
+        dealerApi.getStats(),
+        dealerApi.getDistinctStates(),
+      ]);
       setDealerStats(stats);
+      setAllStates(statesRes.states ?? []);
     } catch (err) {
       console.error('Failed to load dealer stats:', err);
     }
@@ -327,6 +332,31 @@ export default function Dealers({ role }: DealersProps) {
       if (filterState !== 'all') params.state = filterState;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
 
+      // Date filter → convert to dateFrom / dateTo
+      if (dateFilter !== 'all') {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (dateFilter === 'today') {
+          params.dateFrom = today.toISOString().split('T')[0];
+          params.dateTo   = today.toISOString().split('T')[0];
+        } else if (dateFilter === 'yesterday') {
+          const y = new Date(today); y.setDate(y.getDate() - 1);
+          params.dateFrom = y.toISOString().split('T')[0];
+          params.dateTo   = y.toISOString().split('T')[0];
+        } else if (dateFilter === 'week') {
+          const w = new Date(today); w.setDate(w.getDate() - 7);
+          params.dateFrom = w.toISOString().split('T')[0];
+          params.dateTo   = today.toISOString().split('T')[0];
+        } else if (dateFilter === 'month') {
+          const m = new Date(today); m.setDate(m.getDate() - 30);
+          params.dateFrom = m.toISOString().split('T')[0];
+          params.dateTo   = today.toISOString().split('T')[0];
+        } else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
+          params.dateFrom = customDateRange.from;
+          params.dateTo   = customDateRange.to;
+        }
+      }
+
       const res = await dealerApi.getAll(params);
       const items = Array.isArray(res) ? res : (res as any).data ?? [];
       const total = Array.isArray(res) ? items.length : (res as any).total ?? items.length;
@@ -337,13 +367,13 @@ export default function Dealers({ role }: DealersProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterBank]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadData(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -370,7 +400,7 @@ export default function Dealers({ role }: DealersProps) {
   const permissions = getPermissions(role);
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
-  const uniqueStates = ['all', ...Array.from(new Set(data.map(d => d.state))).sort()];
+  const uniqueStates = ['all', ...allStates];
 
   const filtered = data; // Server-side pagination handles filtering
 

@@ -86,6 +86,10 @@ export const electricianApi = {
   },
   getTierCounts: () =>
     request<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>('/electricians/tier-counts'),
+  getDistinctStates: () =>
+    request<{ states: string[] }>('/electricians/distinct-states'),
+  getDistinctCategories: () =>
+    request<{ categories: string[] }>('/electricians/distinct-categories'),
   getOne: (id: string) => request<any>(`/electricians/${id}`),
   create: (body: object) => request<any>('/electricians', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -102,6 +106,8 @@ export const dealerApi = {
   },
   getStats: () =>
     request<{ total: number; active: number; pending: number; inactive: number }>('/dealers/stats'),
+  getDistinctStates: () =>
+    request<{ states: string[] }>('/dealers/distinct-states'),
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
