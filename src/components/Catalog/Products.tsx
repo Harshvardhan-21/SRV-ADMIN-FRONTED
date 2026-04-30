@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Package, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
 import type { Product, AdminRole } from '@/lib/types';
-import { getPermissions } from '@/lib/permissions';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
 import { productApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -16,7 +17,7 @@ interface ProductsProps {
 
 const CATEGORIES_FALLBACK = ['Fan Box','Concealed Box','Modular Box','Junction Box','Surface Box','MCB Box','Change Over','Fan Rods','Kitkat Fuses','Bus Bar Premium','Bus Bar Super','Main Switch Fuse Units','Junction Box','PVC CONDUIT BEND','PVC CONDUIT PIPE','VENTOGUARD','General'];
 
-function ProductModal({ product, onClose, onEdit, permissions }: { product: Product; onClose: () => void; onEdit: () => void; permissions: any }) {
+function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product; onClose: () => void; onEdit: () => void; canEdit: boolean }) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   return (
@@ -72,7 +73,7 @@ function ProductModal({ product, onClose, onEdit, permissions }: { product: Prod
             </div>
           )}
           <div style={{ display: 'flex', gap: 10 }}>
-            {permissions.canEdit && (
+            {canEdit && (
               <button onClick={onEdit} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>✏️ Edit Product</button>
             )}
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Close</button>
@@ -83,11 +84,12 @@ function ProductModal({ product, onClose, onEdit, permissions }: { product: Prod
   );
 }
 
-function EditModal({ product, onClose, onSave, onDelete, categories }: { product: Product | null; onClose: () => void; onSave: (d: Partial<Product>) => void; onDelete?: () => void; categories: string[] }) {
+function EditModal({ product, onClose, onSave, onDelete, categories, role, canDelete }: { product: Product | null; onClose: () => void; onSave: (d: Partial<Product>) => void; onDelete?: () => void; categories: string[]; role: AdminRole; canDelete?: boolean }) {
   const C = useThemePalette();
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const isAdd = !product;
+  const isSuperAdmin = role === 'super_admin';
   const [imageMode, setImageMode] = useState<'url' | 'file'>('url');
   const [imageUploading, setImageUploading] = useState(false);
   const [form, setForm] = useState<Partial<Product>>(product ?? {
@@ -165,8 +167,8 @@ function EditModal({ product, onClose, onSave, onDelete, categories }: { product
             <div><label style={labelStyle}>Points per Scan *</label><input style={inputStyle} type="number" value={form.points ?? ''} onChange={e => f('points', e.target.value === '' ? '' : +e.target.value)} /></div>
             <div><label style={labelStyle}>Stock</label><input style={inputStyle} type="number" value={form.stock ?? ''} onChange={e => f('stock', e.target.value === '' ? '' : +e.target.value)} /></div>
             <div><label style={labelStyle}>SKU</label><input style={inputStyle} value={form.sku ?? ''} onChange={e => f('sku', e.target.value)} placeholder="SRV-FB-3-001" /></div>
-            <div><label style={labelStyle}>Status</label>
-              <select style={inputStyle} value={form.isActive ? 'active' : 'inactive'} onChange={e => f('isActive', e.target.value === 'active')}>
+            <div><label style={labelStyle}>Status {!isSuperAdmin && <span style={{ fontSize: 10, color: C.muted }}>(Super Admin only)</span>}</label>
+              <select style={{ ...inputStyle, cursor: isSuperAdmin ? 'pointer' : 'not-allowed', opacity: isSuperAdmin ? 1 : 0.6 }} value={form.isActive ? 'active' : 'inactive'} onChange={e => isSuperAdmin && f('isActive', e.target.value === 'active')} disabled={!isSuperAdmin}>
                 <option value="active">Active</option><option value="inactive">Inactive</option>
               </select>
             </div>
@@ -175,7 +177,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories }: { product
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            {!isAdd && onDelete && (
+            {!isAdd && onDelete && (isSuperAdmin || canDelete) && (
               <button onClick={onDelete} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>🗑️ Delete</button>
             )}
             <button onClick={() => onSave(form)} disabled={imageUploading} style={{ flex: 1, background: imageUploading ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: imageUploading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{imageUploading ? '⏳ Uploading Image...' : isAdd ? '✅ Add Product' : '💾 Save Changes'}</button>
@@ -292,7 +294,26 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
-  const permissions = getPermissions(role);
+  // Get auth context for adminId
+  const { auth } = useAppContext();
+  
+  // Load permissions from database
+  const userPermissions = useUserPermissions(auth.adminId ?? undefined, role);
+  const canCreate = userPermissions.canCreateInModule('products');
+  const canEdit = userPermissions.canEditInModule('products');
+  const canDelete = userPermissions.canDeleteInModule('products');
+  
+  // Debug logging
+  console.log('=== PRODUCTS PERMISSIONS DEBUG ===');
+  console.log('Auth:', auth);
+  console.log('Role:', role);
+  console.log('Admin ID:', auth.adminId);
+  console.log('Can Create:', canCreate);
+  console.log('Can Edit:', canEdit);
+  console.log('Can Delete:', canDelete);
+  console.log('User Permissions:', userPermissions);
+  console.log('================================');
+  
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   const uniqueBadges = Array.from(new Set(data.map((p: Product) => p.badge).filter(Boolean)));
@@ -392,8 +413,8 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      {viewing && <ProductModal product={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} />}
-      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={handleDelete} categories={dbCategories} />}
+      {viewing && <ProductModal product={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} />}
+      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={handleDelete} categories={dbCategories} role={role} canDelete={canDelete} />}
       
       <ConfirmDialog
         show={showDeleteConfirm}
@@ -419,7 +440,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>📦 Products</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage product catalog, points and stock levels</p>
         </div>
-        {permissions.canCreate && (
+        {canCreate && (
           <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Product</button>
         )}
       </div>
@@ -572,7 +593,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => setViewing(p)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                    {permissions.canEdit && (
+                    {canEdit && (
                       <>
                         <button onClick={() => setEditing(p)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
                         <button onClick={() => updateProduct(p.id, { isActive: !p.isActive })} style={{ background: p.isActive ? '#FEE2E2' : '#D1FAE5', color: p.isActive ? '#991B1B' : '#065F46', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -580,7 +601,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                         </button>
                       </>
                     )}
-                    {!permissions.canEdit && (
+                    {!canEdit && (
                       <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px' }}>Read Only</span>
                     )}
                   </div>

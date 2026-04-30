@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, Upload, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { productApi } from '@/lib/api';
+import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -46,37 +46,53 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
   const [imageUploading, setImageUploading] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
-  // Load categories from products API — derive unique categories
+  // Load categories from backend API
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const res = await productApi.getAll({ limit: '1000' });
-      const products = Array.isArray(res) ? res : (res as any).data ?? [];
-      // Group by category — pick the first valid non-empty image for each category
-      const catMap = new Map<string, { count: number; image: string; isActive: boolean }>();
-      products.forEach((p: any) => {
-        const cat = p.category ?? 'Uncategorized';
-        if (!catMap.has(cat)) {
-          catMap.set(cat, { count: 0, image: '', isActive: p.isActive ?? true });
-        }
-        const entry = catMap.get(cat)!;
-        entry.count++;
-        // Keep updating image until we find a valid https URL (skip empty/blob/base64)
-        if (!entry.image && p.image && typeof p.image === 'string' && p.image.startsWith('https://')) {
-          entry.image = p.image;
-        }
-      });
-      const derived: Category[] = Array.from(catMap.entries()).map(([name, val], i) => ({
-        id: i + 1,
-        name,
-        slug: toSlug(name),
-        description: '',
-        image: val.image,
-        productCount: val.count,
-        isActive: val.isActive,
-        sortOrder: i + 1,
-      }));
-      setCategories(derived);
+      const categories = await productCategoryApi.getAll();
+      
+      // If no categories exist, derive from products as fallback
+      if (!categories || categories.length === 0) {
+        const res = await productApi.getAll({ limit: '1000' });
+        const products = Array.isArray(res) ? res : (res as any).data ?? [];
+        const catMap = new Map<string, { count: number; image: string; isActive: boolean }>();
+        products.forEach((p: any) => {
+          const cat = p.category ?? 'Uncategorized';
+          if (!catMap.has(cat)) {
+            catMap.set(cat, { count: 0, image: '', isActive: p.isActive ?? true });
+          }
+          const entry = catMap.get(cat)!;
+          entry.count++;
+          if (!entry.image && p.image && typeof p.image === 'string' && p.image.startsWith('https://')) {
+            entry.image = p.image;
+          }
+        });
+        const derived: Category[] = Array.from(catMap.entries()).map(([name, val], i) => ({
+          id: i + 1,
+          name,
+          slug: toSlug(name),
+          description: '',
+          image: val.image,
+          productCount: val.count,
+          isActive: val.isActive,
+          sortOrder: i + 1,
+        }));
+        setCategories(derived);
+      } else {
+        // Map backend categories to frontend format
+        const mapped: Category[] = categories.map((c: any, i: number) => ({
+          id: c.id || i + 1,
+          name: c.label || c.name || 'Unnamed',
+          slug: c.slug || toSlug(c.label || c.name || ''),
+          description: c.description || '',
+          image: c.imageUrl || c.image || '',
+          productCount: c.productCount || 0,
+          isActive: c.isActive ?? true,
+          sortOrder: c.sortOrder ?? i + 1,
+        }));
+        setCategories(mapped);
+      }
     } catch (err) {
       console.error('Failed to load categories:', err);
     } finally {
@@ -128,26 +144,61 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
       setAlertDialog({ show: true, title: 'Validation Error', message: 'Category Name is required!', type: 'error' });
       return;
     }
-    if (editingId !== null) {
-      // Update local state only (categories are derived from products)
-      setCategories(prev => prev.map(c => c.id === editingId ? { ...c, ...form } : c));
-      setAlertDialog({ show: true, title: 'Success', message: 'Category updated!', type: 'success' });
-    } else {
-      const newId = Math.max(0, ...categories.map(c => c.id)) + 1;
-      setCategories(prev => [...prev, { id: newId, ...form }]);
-      setAlertDialog({ show: true, title: 'Success', message: 'Category added!', type: 'success' });
+    
+    try {
+      const payload = {
+        label: form.name,
+        slug: form.slug,
+        description: form.description,
+        imageUrl: form.image,
+        sortOrder: form.sortOrder,
+        isActive: form.isActive,
+      };
+      
+      if (editingId !== null) {
+        // Update existing category
+        await productCategoryApi.update(String(editingId), payload);
+        setAlertDialog({ show: true, title: 'Success', message: 'Category updated successfully!', type: 'success' });
+      } else {
+        // Create new category
+        await productCategoryApi.create(payload);
+        setAlertDialog({ show: true, title: 'Success', message: 'Category created successfully!', type: 'success' });
+      }
+      
+      setShowModal(false);
+      await loadCategories(); // Reload from backend
+    } catch (error: any) {
+      console.error('Failed to save category:', error);
+      setAlertDialog({ show: true, title: 'Error', message: error.message || 'Failed to save category', type: 'error' });
     }
-    setShowModal(false);
   };
 
-  const handleToggle = (id: number) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
+  const handleToggle = async (id: number) => {
+    try {
+      const category = categories.find(c => c.id === id);
+      if (!category) return;
+      
+      await productCategoryApi.update(String(id), { isActive: !category.isActive });
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
+    } catch (error) {
+      console.error('Failed to toggle category:', error);
+      setAlertDialog({ show: true, title: 'Error', message: 'Failed to update category status', type: 'error' });
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId === null) return;
-    setCategories(prev => prev.filter(c => c.id !== deleteId));
-    setDeleteId(null);
+    
+    try {
+      await productCategoryApi.delete(String(deleteId));
+      setCategories(prev => prev.filter(c => c.id !== deleteId));
+      setAlertDialog({ show: true, title: 'Success', message: 'Category deleted successfully!', type: 'success' });
+    } catch (error: any) {
+      console.error('Failed to delete category:', error);
+      setAlertDialog({ show: true, title: 'Error', message: error.message || 'Failed to delete category', type: 'error' });
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const getExportData = () =>

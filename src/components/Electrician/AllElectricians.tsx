@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
-import { getPermissions } from '@/lib/permissions';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -467,7 +468,15 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
-  const permissions = getPermissions(role);
+  // Get auth context and load permissions from database
+  const { auth } = useAppContext();
+  const userPermissions = useUserPermissions(auth.adminId ?? undefined, role);
+  const permissions = {
+    canCreate: userPermissions.canCreateInModule('electricians'),
+    canEdit: userPermissions.canEditInModule('electricians'),
+    canDelete: userPermissions.canDeleteInModule('electricians'),
+  };
+  
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   const uniqueStates = ['all', ...allStates];

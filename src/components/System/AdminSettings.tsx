@@ -52,10 +52,34 @@ export default function AdminSettings() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'password'>('users');
   const [saved, setSaved] = useState(false);
-  // Editable role permissions state
+  // Password Change Modal State
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordChangeUser, setPasswordChangeUser] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  // Editable role permissions state - initialize from actual admin permissions
   const [rolePerms, setRolePerms] = useState<Record<AdminRole, string[]>>({ ...ROLE_DEFAULT_PERMISSIONS });
   const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
   const [permSaved, setPermSaved] = useState(false);
+  
+  // Update rolePerms when admins load
+  useEffect(() => {
+    if (admins.length > 0 && !editingRole) { // Don't reset if we're editing
+      const newRolePerms: Record<AdminRole, string[]> = { ...ROLE_DEFAULT_PERMISSIONS };
+      
+      // For each role, get permissions from the first admin with that role
+      (['admin', 'staff'] as AdminRole[]).forEach(role => {
+        const firstAdminWithRole = admins.find(a => a.role === role);
+        if (firstAdminWithRole && firstAdminWithRole.permissions.length > 0) {
+          newRolePerms[role] = [...firstAdminWithRole.permissions];
+        }
+      });
+      
+      setRolePerms(newRolePerms);
+    }
+  }, [admins, editingRole]);
   
   // Password Policy State
   const [passwordPolicy, setPasswordPolicy] = useState({
@@ -75,17 +99,98 @@ export default function AdminSettings() {
     try {
       const res = await adminApi.getAll();
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
-      setAdmins(data.map((a: any) => ({
-        id: a.id,
-        name: a.name,
-        email: a.email,
-        phone: a.phone ?? '',
-        role: a.role ?? 'staff',
-        status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
-        createdAt: a.createdAt ?? a.created_at ?? '',
-        lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
-        permissions: a.permissions ?? ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
-      })));
+      
+      // Load admins with their custom permissions from database
+      const adminsWithPerms = await Promise.all(data.map(async (a: any) => {
+        let customPermissions: string[] = [];
+        
+        // Try to load custom permissions from database
+        try {
+          const token = localStorage.getItem('srv_token'); // Correct token key
+          if (!token) {
+            console.log('No token found, skipping permission load for', a.name);
+            return {
+              id: a.id,
+              name: a.name,
+              email: a.email,
+              phone: a.phone ?? '',
+              role: a.role ?? 'staff',
+              status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
+              createdAt: a.createdAt ?? a.created_at ?? '',
+              lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
+              permissions: ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
+            };
+          }
+          
+          const permsRes = await fetch(`http://localhost:3001/api/v1/admins/${a.id}/permissions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (permsRes.status === 401) {
+            console.warn('Token expired or unauthorized. Please logout and login again.');
+            // Don't throw error, just use default permissions
+            return {
+              id: a.id,
+              name: a.name,
+              email: a.email,
+              phone: a.phone ?? '',
+              role: a.role ?? 'staff',
+              status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
+              createdAt: a.createdAt ?? a.created_at ?? '',
+              lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
+              permissions: ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
+            };
+          }
+          
+          if (permsRes.ok) {
+            const permsData = await permsRes.json();
+            console.log(`Loaded permissions for ${a.name}:`, permsData);
+            // Convert module permissions to permission strings
+            if (Array.isArray(permsData)) {
+              customPermissions = permsData.flatMap((p: any) => {
+                const perms: string[] = [];
+                const moduleMap: Record<string, string> = {
+                  'dashboard': 'View Dashboard',
+                  'electricians': 'Manage Electricians',
+                  'dealers': 'Manage Dealers',
+                  'products': 'Manage Products',
+                  'qr_codes': 'Manage QR Codes',
+                  'gifts': 'Manage Gifts',
+                  'reports': 'View Reports',
+                  'settings': 'Manage Settings',
+                  'notifications': 'Send Notifications',
+                  'banners': 'Manage Banners',
+                  'finance': 'Manage Finance',
+                  'commissions': 'Manage Commissions',
+                };
+                const permName = moduleMap[p.module];
+                if (permName && (p.canView || p.canCreate || p.canEdit || p.canDelete)) {
+                  perms.push(permName);
+                }
+                return perms;
+              });
+              console.log(`Converted to permission strings for ${a.name}:`, customPermissions);
+            }
+          }
+        } catch (err) {
+          console.log('Could not load permissions for', a.name, '- using defaults');
+        }
+        
+        return {
+          id: a.id,
+          name: a.name,
+          email: a.email,
+          phone: a.phone ?? '',
+          role: a.role ?? 'staff',
+          status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
+          createdAt: a.createdAt ?? a.created_at ?? '',
+          lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
+          permissions: customPermissions.length > 0 ? customPermissions : ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
+        };
+      }));
+      
+      console.log('Final admins with permissions:', adminsWithPerms.map(a => ({ name: a.name, role: a.role, permissions: a.permissions })));
+      setAdmins(adminsWithPerms);
     } catch (err) {
       console.error('Failed to load admins:', err);
     } finally {
@@ -122,6 +227,55 @@ export default function AdminSettings() {
     setShowModal(true);
   };
 
+  const openPasswordChange = (a: AdminUser) => {
+    setPasswordChangeUser(a);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setPasswordError('');
+    setPasswordSuccess(false);
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwordChangeUser) return;
+    
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    // Validation
+    if (!newPassword || !confirmNewPassword) {
+      setPasswordError('Please fill in both password fields');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await adminApi.update(passwordChangeUser.id, { password: newPassword });
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordChangeUser(null);
+        setNewPassword('');
+        setConfirmNewPassword('');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to change password:', err);
+      setPasswordError(err?.message || 'Failed to change password. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleRoleChange = (role: AdminRole) => {
     setForm(f => ({ ...f, role, permissions: [...ROLE_DEFAULT_PERMISSIONS[role]] }));
   };
@@ -139,22 +293,38 @@ export default function AdminSettings() {
     setSaveError('');
     try {
       if (editingId) {
-        const updatePayload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone || undefined };
+        const updatePayload: any = { 
+          name: form.name.trim(), 
+          email: form.email.trim(), 
+          role: form.role
+        };
+        // Only add phone if it's not empty
+        if (form.phone && form.phone.trim()) {
+          updatePayload.phone = form.phone.trim();
+        }
         // Only send password if user typed a new one
-        if (form.password.trim()) updatePayload.password = form.password;
+        if (form.password && form.password.trim()) {
+          updatePayload.password = form.password.trim();
+        }
+        console.log('Updating admin with payload:', updatePayload);
         await adminApi.update(editingId, updatePayload);
         if (editingId === auth.adminId) {
           setAdminName(form.name);
         }
       } else {
-        await adminApi.create({
-          name: form.name,
-          email: form.email,
+        const createPayload: any = {
+          name: form.name.trim(),
+          email: form.email.trim(),
           role: form.role,
-          password: form.password,
-          phone: form.phone || undefined,
+          password: form.password.trim(),
           isActive: true,
-        });
+        };
+        // Only add phone if it's not empty
+        if (form.phone && form.phone.trim()) {
+          createPayload.phone = form.phone.trim();
+        }
+        console.log('Creating admin with payload:', createPayload);
+        await adminApi.create(createPayload);
       }
       await loadAdmins();
       setShowModal(false);
@@ -201,6 +371,100 @@ export default function AdminSettings() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
       <ConfirmDialog show={deleteId !== null} title="Delete Admin" message={`Delete admin "${admins.find(a => a.id === deleteId)?.name}"? This cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleteId(null)} confirmText="Delete" type="danger" />
+
+      {/* Password Change Modal */}
+      {showPasswordModal && passwordChangeUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowPasswordModal(false)}>
+          <div style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Key size={18} color="#92400E" /></div>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Change Password</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{passwordChangeUser.name} ({passwordChangeUser.email})</div>
+                </div>
+              </div>
+              <button onClick={() => setShowPasswordModal(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              {passwordError && (
+                <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
+                  ❌ {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div style={{ background: '#D1FAE5', border: '1px solid #A7F3D0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#065F46', fontSize: 13, fontWeight: 600 }}>
+                  ✅ Password changed successfully!
+                </div>
+              )}
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={lbl}>New Password *</label>
+                  <input 
+                    type="password" 
+                    style={inp} 
+                    value={newPassword} 
+                    onChange={e => setNewPassword(e.target.value)} 
+                    placeholder="Enter new password (min 8 characters)"
+                    disabled={saving || passwordSuccess}
+                  />
+                </div>
+                <div>
+                  <label style={lbl}>Confirm New Password *</label>
+                  <input 
+                    type="password" 
+                    style={inp} 
+                    value={confirmNewPassword} 
+                    onChange={e => setConfirmNewPassword(e.target.value)} 
+                    placeholder="Re-enter new password"
+                    disabled={saving || passwordSuccess}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button 
+                  onClick={handlePasswordChange} 
+                  disabled={saving || passwordSuccess}
+                  style={{ 
+                    flex: 1, 
+                    background: saving || passwordSuccess ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: 10, 
+                    padding: '12px', 
+                    fontSize: 14, 
+                    fontWeight: 700, 
+                    cursor: saving || passwordSuccess ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8
+                  }}
+                >
+                  <Key size={16} />
+                  {saving ? 'Changing...' : passwordSuccess ? 'Changed!' : 'Change Password'}
+                </button>
+                <button 
+                  onClick={() => setShowPasswordModal(false)} 
+                  disabled={saving}
+                  style={{ 
+                    background: C.bg, 
+                    color: C.muted, 
+                    border: 'none', 
+                    borderRadius: 10, 
+                    padding: '12px 20px', 
+                    fontSize: 14, 
+                    fontWeight: 600, 
+                    cursor: saving ? 'not-allowed' : 'pointer' 
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #1E293B, #334155)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
@@ -276,6 +540,7 @@ export default function AdminSettings() {
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => openEdit(a)} title="Edit" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
+                        <button onClick={() => openPasswordChange(a)} title="Change Password" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: '#FEF3C7', color: '#92400E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Key size={14} /></button>
                         {a.role !== 'super_admin' && (
                           <button onClick={() => setDeleteId(a.id)} title="Delete" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
                         )}
@@ -290,31 +555,181 @@ export default function AdminSettings() {
       )}
 
       {activeTab === 'roles' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {(Object.entries(ROLE_CONFIG) as [AdminRole, typeof ROLE_CONFIG[AdminRole]][]).map(([role, rc]) => (
-            <div key={role} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: C.shadow }}>
-              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 20 }}>{rc.icon}</span>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{rc.label}</div>
-                  <div style={{ fontSize: 11, color: C.muted }}>{admins.filter(a => a.role === role).length} users</div>
-                </div>
-              </div>
-              <div style={{ padding: '16px 20px' }}>
-                {ALL_PERMISSIONS.map(perm => {
-                  const has = ROLE_DEFAULT_PERMISSIONS[role].includes(perm);
-                  return (
-                    <div key={perm} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 4, background: has ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: 10 }}>{has ? '✓' : '✗'}</span>
-                      </div>
-                      <span style={{ fontSize: 12, color: has ? C.text : C.muted, fontWeight: has ? 600 : 400 }}>{perm}</span>
-                    </div>
-                  );
-                })}
-              </div>
+        <div>
+          {permSaved && (
+            <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
+              <span style={{ fontSize: 18 }}>✅</span>
+              <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Permissions saved successfully for all users!</span>
             </div>
-          ))}
+          )}
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+            {(Object.entries(ROLE_CONFIG) as [AdminRole, typeof ROLE_CONFIG[AdminRole]][]).map(([role, rc]) => {
+              const roleAdmins = admins.filter(a => a.role === role);
+              return (
+                <div key={role} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: C.shadow }}>
+                  <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 20 }}>{rc.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{rc.label}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{roleAdmins.length} users</div>
+                      </div>
+                    </div>
+                    {role !== 'super_admin' && editingRole !== role && (
+                      <button 
+                        onClick={() => {
+                          // Initialize rolePerms with current admin's permissions
+                          const firstAdminWithRole = roleAdmins[0];
+                          if (firstAdminWithRole && firstAdminWithRole.permissions.length > 0) {
+                            setRolePerms(prev => ({
+                              ...prev,
+                              [role]: [...firstAdminWithRole.permissions]
+                            }));
+                          }
+                          setEditingRole(role);
+                        }}
+                        style={{ 
+                          background: '#EFF6FF', 
+                          color: '#1D4ED8', 
+                          border: 'none', 
+                          borderRadius: 7, 
+                          padding: '6px 12px', 
+                          fontSize: 11, 
+                          fontWeight: 700, 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                    )}
+                    {editingRole === role && (
+                      <button 
+                        onClick={async () => {
+                          // Save permissions for all users with this role
+                          setSaving(true);
+                          try {
+                            const moduleMap: Record<string, string> = {
+                              'View Dashboard': 'dashboard',
+                              'Manage Electricians': 'electricians',
+                              'Manage Dealers': 'dealers',
+                              'Manage Products': 'products',
+                              'Manage QR Codes': 'qr_codes',
+                              'Manage Gifts': 'gifts',
+                              'View Reports': 'reports',
+                              'Manage Settings': 'settings',
+                              'Send Notifications': 'notifications',
+                              'Manage Banners': 'banners',
+                              'Manage Finance': 'finance',
+                              'Manage Commissions': 'commissions',
+                            };
+                            
+                            // Get current permissions for this role
+                            const currentPerms = rolePerms[role];
+                            console.log('Saving permissions for role:', role, 'Permissions:', currentPerms);
+                            
+                            // Convert to module permissions format
+                            const modulePermissions = Object.entries(moduleMap).map(([permName, moduleName]) => ({
+                              module: moduleName,
+                              canView: currentPerms.includes(permName),
+                              canCreate: currentPerms.includes(permName),
+                              canEdit: currentPerms.includes(permName),
+                              canDelete: currentPerms.includes(permName),
+                              canExport: currentPerms.includes(permName),
+                            }));
+                            
+                            console.log('Module permissions to save:', modulePermissions);
+                            console.log('Admins with this role:', roleAdmins);
+                            
+                            // Save for all users with this role
+                            const results = await Promise.all(roleAdmins.map(async admin => {
+                              console.log(`Saving permissions for admin: ${admin.name} (${admin.id})`);
+                              const response = await fetch(`http://localhost:3001/api/v1/admins/${admin.id}/permissions`, {
+                                method: 'PUT',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${localStorage.getItem('srv_token')}` // Correct token key
+                                },
+                                body: JSON.stringify({ permissions: modulePermissions })
+                              });
+                              
+                              if (!response.ok) {
+                                if (response.status === 401) {
+                                  throw new Error('Session expired. Please logout and login again as Super Admin.');
+                                }
+                                const errorText = await response.text();
+                                console.error(`Failed to save permissions for ${admin.name}:`, response.status, errorText);
+                                throw new Error(`Failed to save permissions for ${admin.name}: ${response.status}`);
+                              }
+                              
+                              const result = await response.json();
+                              console.log(`Successfully saved permissions for ${admin.name}:`, result);
+                              return result;
+                            }));
+                            
+                            console.log('All permissions saved successfully:', results);
+                            
+                            setEditingRole(null);
+                            setPermSaved(true);
+                            setTimeout(() => setPermSaved(false), 3000);
+                            await loadAdmins(); // Reload to show updated permissions
+                          } catch (err) {
+                            console.error('Failed to save permissions:', err);
+                            alert(`Failed to save permissions: ${err.message || 'Please try again.'}`);
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving}
+                        style={{ 
+                          background: saving ? C.muted : '#D1FAE5', 
+                          color: '#065F46', 
+                          border: 'none', 
+                          borderRadius: 7, 
+                          padding: '6px 12px', 
+                          fontSize: 11, 
+                          fontWeight: 700, 
+                          cursor: saving ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {saving ? '⏳' : '✓'} Save
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ padding: '16px 20px' }}>
+                    {ALL_PERMISSIONS.map(perm => {
+                      const has = editingRole === role ? rolePerms[role].includes(perm) : ROLE_DEFAULT_PERMISSIONS[role].includes(perm);
+                      const isEditing = editingRole === role;
+                      return (
+                        <div 
+                          key={perm} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 8, 
+                            marginBottom: 8,
+                            cursor: isEditing && role !== 'super_admin' ? 'pointer' : 'default',
+                            padding: '6px 8px',
+                            borderRadius: 6,
+                            background: isEditing ? C.bg : 'transparent'
+                          }}
+                          onClick={() => isEditing && role !== 'super_admin' && toggleRolePerm(role, perm)}
+                        >
+                          <div style={{ width: 18, height: 18, borderRadius: 4, background: has ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ fontSize: 10 }}>{has ? '✓' : '✗'}</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: has ? C.text : C.muted, fontWeight: has ? 600 : 400 }}>{perm}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -563,14 +978,10 @@ export default function AdminSettings() {
                 </div>
               )}
               <div>
-                <label style={lbl}>Permissions</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: 14, background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                  {ALL_PERMISSIONS.map(perm => (
-                    <label key={perm} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: C.text }}>
-                      <input type="checkbox" checked={form.permissions.includes(perm)} onChange={() => togglePermission(perm)} style={{ accentColor: C.red }} />
-                      {perm}
-                    </label>
-                  ))}
+                <label style={lbl}>Note</label>
+                <div style={{ padding: '12px 16px', background: '#EFF6FF', borderRadius: 10, border: `1px solid #BFDBFE` }}>
+                  <div style={{ fontSize: 13, color: '#1E40AF', fontWeight: 600 }}>ℹ️ Permissions are managed separately</div>
+                  <div style={{ fontSize: 12, color: '#1E3A8A', marginTop: 4 }}>After creating this admin, go to the <strong>Role Permissions</strong> tab to configure what they can access.</div>
                 </div>
               </div>
             </div>

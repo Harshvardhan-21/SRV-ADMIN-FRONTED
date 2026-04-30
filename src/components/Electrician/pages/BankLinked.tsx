@@ -186,7 +186,23 @@ export default function ElectricianBankLinked() {
       {viewing && <ViewModal el={viewing} onClose={() => setViewing(null)} C={C} />}
       {editing && <EditModal el={editing} onClose={() => setEditing(null)} onSave={async e => {
         try {
-          await electricianApi.update(e.id, e);
+          // Only send allowed fields to backend (avoid forbidNonWhitelisted error)
+          const payload = {
+            name: e.name,
+            phone: e.phone,
+            city: e.city,
+            state: e.state,
+            tier: e.tier,
+            bankLinked: e.bankLinked,
+            upiId: e.upiId ?? null,
+            bankAccount: e.bankAccount ?? null,
+            ifsc: e.ifsc ?? null,
+            bankName: e.bankName ?? null,
+            accountHolderName: e.accountHolderName ?? null,
+            walletBalance: e.walletBalance,
+            totalPoints: e.totalPoints,
+          };
+          await electricianApi.update(e.id, payload);
           setData(prev => prev.map(x => x.id === e.id ? e : x));
         } catch (err) { console.error(err); }
         setEditing(null);

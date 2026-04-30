@@ -36,10 +36,21 @@ async function request<T>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  console.log('=== API REQUEST ===');
+  console.log('Path:', path);
+  console.log('Method:', options.method || 'GET');
+  console.log('Headers:', headers);
+  console.log('Body:', options.body);
+
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  console.log('=== API RESPONSE ===');
+  console.log('Status:', res.status);
+  console.log('Status Text:', res.statusText);
 
   if (!res.ok) {
     const rawText = await res.text().catch(() => '');
+    console.log('Error Response:', rawText);
     let message = res.statusText;
     try {
       const parsed = rawText ? JSON.parse(rawText) : null;
@@ -73,7 +84,11 @@ export const adminApi = {
     return request<{ data: any[]; total: number }>(`/admins${q}`);
   },
   getOne: (id: string) => request<any>(`/admins/${id}`),
-  create: (body: object) => request<any>('/admins', { method: 'POST', body: JSON.stringify(body) }),
+  create: (body: object) => {
+    // Generate UUID on client side since database id column is TEXT type
+    const uuid = crypto.randomUUID();
+    return request<any>('/admins', { method: 'POST', body: JSON.stringify({ ...body, id: uuid }) });
+  },
   update: (id: string, body: object) => request<any>(`/admins/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/admins/${id}`, { method: 'DELETE' }),
 };
@@ -139,6 +154,15 @@ export const productApi = {
     const data = await res.json();
     return data.url as string;
   },
+};
+
+// ─── Product Categories ───────────────────────────────────────────────────────
+export const productCategoryApi = {
+  getAll: () => request<any[]>('/product-categories'),
+  getOne: (id: string) => request<any>(`/product-categories/${id}`),
+  create: (body: object) => request<any>('/product-categories', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/product-categories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => request<void>(`/product-categories/${id}`, { method: 'DELETE' }),
 };
 
 // ─── QR Codes ─────────────────────────────────────────────────────────────────

@@ -179,7 +179,23 @@ export default function DealerBankLinked() {
       {viewing && <ViewModal d={viewing} onClose={() => setViewing(null)} C={C} />}
       {editing && <EditModal d={editing} onClose={() => setEditing(null)} onSave={async d => {
         try {
-          await dealerApi.update(d.id, d);
+          // Only send allowed fields to backend (avoid forbidNonWhitelisted error)
+          const payload = {
+            name: d.name,
+            phone: d.phone,
+            email: d.email ?? null,
+            town: d.town,
+            state: d.state,
+            tier: d.tier,
+            bankLinked: d.bankLinked,
+            upiId: d.upiId ?? null,
+            bankAccount: (d as any).bankAccount ?? null,
+            ifsc: (d as any).ifsc ?? null,
+            bankName: (d as any).bankName ?? null,
+            accountHolderName: (d as any).accountHolderName ?? null,
+            gstNumber: d.gstNumber ?? null,
+          };
+          await dealerApi.update(d.id, payload);
           setData(prev => prev.map(x => x.id === d.id ? d : x));
         } catch (err) { console.error(err); }
         setEditing(null);

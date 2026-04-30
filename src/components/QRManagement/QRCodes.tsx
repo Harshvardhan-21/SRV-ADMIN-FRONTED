@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { QrCode, Download, Eye, Trash2, Search, Filter, Calendar, Package, Copy, Check } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import type { AdminRole } from '@/lib/types';
-import { getPermissions } from '@/lib/permissions';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAppContext } from '@/lib/appContext';
 import { qrCodeApi } from '@/lib/api';
 import QRCodeLib from 'qrcode';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -95,7 +96,14 @@ export default function QRCodes({ role }: QRCodesProps) {
     }
   };
 
-  const permissions = getPermissions(role);
+  // Get auth context and load permissions from database
+  const { auth } = useAppContext();
+  const userPermissions = useUserPermissions(auth.adminId ?? undefined, role);
+  const permissions = {
+    canCreate: userPermissions.canCreateInModule('qr_codes'),
+    canEdit: userPermissions.canEditInModule('qr_codes'),
+    canDelete: userPermissions.canDeleteInModule('qr_codes'),
+  };
 
   // Load QR codes from API and generate real QR images
   const loadQRCodes = async (page = currentPage) => {

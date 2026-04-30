@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, X, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
-import { getPermissions } from '@/lib/permissions';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -397,7 +398,15 @@ export default function Dealers({ role }: DealersProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
-  const permissions = getPermissions(role);
+  // Get auth context and load permissions from database
+  const { auth } = useAppContext();
+  const userPermissions = useUserPermissions(auth.adminId ?? undefined, role);
+  const permissions = {
+    canCreate: userPermissions.canCreateInModule('dealers'),
+    canEdit: userPermissions.canEditInModule('dealers'),
+    canDelete: userPermissions.canDeleteInModule('dealers'),
+  };
+  
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   const uniqueStates = ['all', ...allStates];
