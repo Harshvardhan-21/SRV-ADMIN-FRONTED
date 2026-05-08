@@ -14,6 +14,10 @@ interface AllCounterBoysProps {
   role: AdminRole;
 }
 
+type CounterBoyForm = Partial<CounterBoy> & {
+  password?: string;
+};
+
 const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
   active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
   pending: { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
@@ -27,6 +31,10 @@ const TIER_CONFIG: Record<MemberTier, { bg: string; color: string }> = {
   Platinum: { bg: '#F5F3FF', color: '#5B21B6' },
   Diamond: { bg: '#EFF6FF', color: '#1D4ED8' },
 };
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Failed to save counter boy';
+}
 
 function ViewModal({ counterBoy, onClose, onEdit, canEdit }: { counterBoy: CounterBoy; onClose: () => void; onEdit: () => void; canEdit: boolean }) {
   const C = useThemePalette();
@@ -134,12 +142,12 @@ function EditModal({
   counterBoy: CounterBoy | null;
   dealers: { id: string; name: string; dealerCode?: string }[];
   onClose: () => void;
-  onSave: (data: Partial<CounterBoy>) => void;
+  onSave: (data: CounterBoyForm) => void;
 }) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   const isAdd = !counterBoy;
-  const [form, setForm] = useState<Partial<CounterBoy>>(counterBoy ?? {
+  const [form, setForm] = useState<CounterBoyForm>(counterBoy ?? {
     name: '',
     phone: '',
     email: '',
@@ -165,6 +173,7 @@ function EditModal({
     accountHolderName: '',
     bankAccount: '',
     ifsc: '',
+    password: '',
   });
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' };
@@ -201,6 +210,16 @@ function EditModal({
           <div>
             <label style={labelStyle}>Email</label>
             <input style={inputStyle} value={form.email ?? ''} onChange={e => setField('email', e.target.value)} />
+          </div>
+          <div>
+            <label style={labelStyle}>App Password</label>
+            <input
+              type="password"
+              style={inputStyle}
+              value={form.password ?? ''}
+              onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
+              placeholder={isAdd ? 'Set login password' : 'Leave blank to keep current password'}
+            />
           </div>
           <div>
             <label style={labelStyle}>Counter Boy Code</label>
@@ -372,8 +391,12 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
   }, []);
 
   useEffect(() => {
-    load();
-    loadStats();
+    const timer = window.setTimeout(() => {
+      void load();
+      void loadStats();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [load, loadStats]);
 
   useEffect(() => {
@@ -407,7 +430,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
     }
   };
 
-  const handleSave = async (form: Partial<CounterBoy>) => {
+  const handleSave = async (form: CounterBoyForm) => {
     if (!form.name?.trim() || !form.phone?.trim()) {
       setAlert({ show: true, type: 'error', title: 'Missing fields', message: 'Name and phone are required' });
       return;
@@ -425,8 +448,8 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
       setAlert({ show: true, type: 'success', title: isEditing ? 'Updated' : 'Created', message: isEditing ? 'Counter boy updated successfully' : 'Counter boy created successfully' });
       load();
       loadStats();
-    } catch (error: any) {
-      setAlert({ show: true, type: 'error', title: 'Error', message: error?.message || 'Failed to update counter boy' });
+    } catch (error: unknown) {
+      setAlert({ show: true, type: 'error', title: 'Error', message: getErrorMessage(error) });
     }
   };
 
