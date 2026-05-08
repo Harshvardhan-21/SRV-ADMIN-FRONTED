@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { productApi, authApi, getToken, getStoredAdmin, setToken, setStoredAdmin, removeToken } from '@/lib/api';
+import { productApi, authApi, getToken, getStoredAdmin, setToken, setRefreshToken, setStoredAdmin, removeToken } from '@/lib/api';
 import type { Product, PointsConfig, AdminRole } from '@/lib/types';
 
 interface AuthState {
@@ -75,6 +75,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pointsConfig, setPointsConfig] = useState<PointsConfig[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
 
+  const hydrateProducts = useCallback(async () => {
+    const res = await productApi.getAll({ limit: '200' });
+    const items = Array.isArray(res) ? res : (res as any).data ?? [];
+    const mapped = items.map(mapProduct);
+    setProducts(mapped);
+    setPointsConfig(mapped.map((p: Product) => ({
+      id: `pc-${p.id}`,
+      productId: p.id,
+      productName: p.name,
+      basePoints: p.points,
+      bonusPoints: 0,
+      isActive: p.isActive,
+      updatedAt: new Date().toISOString().split('T')[0],
+    })));
+  }, []);
+
   const setAdminName = useCallback((name: string) => {
     setAuth(prev => ({ ...prev, adminName: name }));
     const admin = getStoredAdmin();
@@ -88,33 +104,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const token = getToken();
     const admin = getStoredAdmin();
     if (token && admin) {
-      setAuth({
-        isLoggedIn: true,
-        role: mapRole(admin.role),
-        adminName: admin.name,
-        adminId: admin.id,
-      });
-      // Load products on session restore
-      productApi.getAll({ limit: '200' }).then(res => {
-        const items = Array.isArray(res) ? res : (res as any).data ?? [];
-        const mapped = items.map(mapProduct);
-        setProducts(mapped);
-        setPointsConfig(mapped.map((p: Product) => ({
-          id: `pc-${p.id}`,
-          productId: p.id,
-          productName: p.name,
-          basePoints: p.points,
-          bonusPoints: 0,
-          isActive: p.isActive,
-          updatedAt: new Date().toISOString().split('T')[0],
-        })));
-      }).catch(err => console.error('Failed to restore products:', err));
+      authApi.profile()
+        .then(async profile => {
+          setStoredAdmin(profile);
+          setAuth({
+            isLoggedIn: true,
+            role: mapRole(profile.role),
+            adminName: profile.name,
+            adminId: profile.id,
+          });
+          await hydrateProducts();
+        })
+        .catch(err => {
+          console.error('Failed to restore admin session:', err);
+          removeToken();
+          setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
+          setProducts([]);
+          setPointsConfig([]);
+        });
+    } else if (admin || token) {
+      removeToken();
     }
-  }, []);
+  }, [hydrateProducts]);
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setToken(res.accessToken);
+    setRefreshToken(res.refreshToken);
     setStoredAdmin(res.admin);
     const role = mapRole(res.admin.role);
     setAuth({
@@ -125,19 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     // Load products immediately after login (token is already set above)
     try {
-      const pRes = await productApi.getAll({ limit: '200' });
-      const items = Array.isArray(pRes) ? pRes : (pRes as any).data ?? [];
-      const mapped = items.map(mapProduct);
-      setProducts(mapped);
-      setPointsConfig(mapped.map((p: Product) => ({
-        id: `pc-${p.id}`,
-        productId: p.id,
-        productName: p.name,
-        basePoints: p.points,
-        bonusPoints: 0,
-        isActive: p.isActive,
-        updatedAt: new Date().toISOString().split('T')[0],
-      })));
+      await hydrateProducts();
     } catch (err) {
       console.error('Failed to load products after login:', err);
     }
@@ -155,26 +159,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshProducts = useCallback(async () => {
     setProductsLoading(true);
     try {
-      const res = await productApi.getAll({ limit: '200' });
-      const items = Array.isArray(res) ? res : (res as any).data ?? [];
-      const mapped = items.map(mapProduct);
-      setProducts(mapped);
-      // Build pointsConfig from products
-      setPointsConfig(mapped.map((p: Product) => ({
-        id: `pc-${p.id}`,
-        productId: p.id,
-        productName: p.name,
-        basePoints: p.points,
-        bonusPoints: 0,
-        isActive: p.isActive,
-        updatedAt: new Date().toISOString().split('T')[0],
-      })));
+      await hydrateProducts();
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
       setProductsLoading(false);
     }
-  }, []);
+  }, [hydrateProducts]);
 
   const addProduct = async (product: Omit<Product, 'id'>) => {
     const body = {

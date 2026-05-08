@@ -7,11 +7,18 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v
 export const getToken = (): string | null =>
   typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
 
+export const getRefreshToken = (): string | null =>
+  typeof window !== 'undefined' ? localStorage.getItem('srv_refresh_token') : null;
+
 export const setToken = (token: string) =>
   localStorage.setItem('srv_token', token);
 
+export const setRefreshToken = (token: string) =>
+  localStorage.setItem('srv_refresh_token', token);
+
 export const removeToken = () => {
   localStorage.removeItem('srv_token');
+  localStorage.removeItem('srv_refresh_token');
   localStorage.removeItem('srv_admin');
 };
 
@@ -24,10 +31,53 @@ export const getStoredAdmin = () => {
 export const setStoredAdmin = (admin: object) =>
   localStorage.setItem('srv_admin', JSON.stringify(admin));
 
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    removeToken();
+    return null;
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          removeToken();
+          return null;
+        }
+
+        const data = await res.json();
+        if (data?.accessToken) {
+          setToken(data.accessToken);
+          return data.accessToken as string;
+        }
+
+        removeToken();
+        return null;
+      })
+      .catch(() => {
+        removeToken();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retried = false
 ): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -36,21 +86,17 @@ async function request<T>(
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  console.log('=== API REQUEST ===');
-  console.log('Path:', path);
-  console.log('Method:', options.method || 'GET');
-  console.log('Headers:', headers);
-  console.log('Body:', options.body);
-
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  console.log('=== API RESPONSE ===');
-  console.log('Status:', res.status);
-  console.log('Status Text:', res.statusText);
+  if (res.status === 401 && !retried && path !== '/auth/login' && path !== '/auth/refresh') {
+    const nextToken = await refreshAccessToken();
+    if (nextToken) {
+      return request<T>(path, options, true);
+    }
+  }
 
   if (!res.ok) {
     const rawText = await res.text().catch(() => '');
-    console.log('Error Response:', rawText);
     let message = res.statusText;
     try {
       const parsed = rawText ? JSON.parse(rawText) : null;
@@ -360,11 +406,47 @@ export const userSearchApi = {
     return Promise.all([
       request<{ data: any[] }>(`/electricians?${params}`).catch(() => ({ data: [] })),
       request<{ data: any[] }>(`/dealers?${params}`).catch(() => ({ data: [] })),
-    ]).then(([elec, dealer]) => [
+      request<{ data: any[] }>(`/app-users?${params}`).catch(() => ({ data: [] })),
+      request<{ data: any[] }>(`/counterboys?${params}`).catch(() => ({ data: [] })),
+    ]).then(([elec, dealer, users, counterboys]) => [
       ...(elec.data ?? []).map((u: any) => ({ ...u, role: 'electrician', label: `${u.name} (${u.electricianCode ?? u.phone}) — Electrician` })),
       ...(dealer.data ?? []).map((u: any) => ({ ...u, role: 'dealer', label: `${u.name} (${u.dealerCode ?? u.phone}) — Dealer` })),
+      ...(users.data ?? []).map((u: any) => ({ ...u, role: 'user', label: `${u.name} (${u.userCode ?? u.phone}) — User` })),
+      ...(counterboys.data ?? []).map((u: any) => ({ ...u, role: 'counterboy', label: `${u.name} (${u.counterboyCode ?? u.phone}) — Counter Boy` })),
     ]);
   },
+};
+
+// ─── App Users (Customers) ────────────────────────────────────────────────────
+export const appUserApi = {
+  getAll: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number }>(`/app-users${q}`);
+  },
+  getStats: () =>
+    request<{ total: number; active: number; pending: number; inactive: number }>('/app-users/stats'),
+  getOne: (id: string) => request<any>(`/app-users/${id}`),
+  create: (body: object) => request<any>('/app-users', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/app-users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  updateStatus: (id: string, status: string) =>
+    request<any>(`/app-users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  delete: (id: string) => request<void>(`/app-users/${id}`, { method: 'DELETE' }),
+};
+
+// ─── Counter Boys ─────────────────────────────────────────────────────────────
+export const counterboyApi = {
+  getAll: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number }>(`/counterboys${q}`);
+  },
+  getStats: () =>
+    request<{ total: number; active: number; pending: number; inactive: number }>('/counterboys/stats'),
+  getOne: (id: string) => request<any>(`/counterboys/${id}`),
+  create: (body: object) => request<any>('/counterboys', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/counterboys/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  updateStatus: (id: string, status: string) =>
+    request<any>(`/counterboys/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  delete: (id: string) => request<void>(`/counterboys/${id}`, { method: 'DELETE' }),
 };
 
 export const referralApi = {

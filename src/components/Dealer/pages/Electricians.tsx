@@ -15,9 +15,10 @@ const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string 
 };
 
 const STATUS_CONFIG: Record<UserStatus, { bg: string; color: string; label: string }> = {
-  active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
-  pending: { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
-  inactive: { bg: '#FEE2E2', color: '#991B1B', label: 'Inactive' },
+  active:    { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
+  pending:   { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
+  inactive:  { bg: '#FEE2E2', color: '#991B1B', label: 'Inactive' },
+  suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;

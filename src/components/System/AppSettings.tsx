@@ -29,6 +29,8 @@ interface AppConfig {
   rateUsEnabled: boolean; rateUsMinScans: number; rateUsPromptDelay: number; playStoreRatingUrl: string; appStoreRatingUrl: string;
   // Language
   defaultLanguage: string; forceUpdate: boolean;
+  // Catalog
+  catalogPdfUrl: string;
 }
 
 const INITIAL: AppConfig = {
@@ -45,7 +47,60 @@ const INITIAL: AppConfig = {
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.srvelectricals', appStoreUrl: 'https://apps.apple.com/app/srv-electricals',
   rateUsEnabled: true, rateUsMinScans: 5, rateUsPromptDelay: 3, playStoreRatingUrl: 'market://details?id=com.srvelectricals', appStoreRatingUrl: 'https://apps.apple.com/app/srv-electricals',
   defaultLanguage: 'English', forceUpdate: false,
+  catalogPdfUrl: '',
 };
+
+function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) => void; C: any; lbl: React.CSSProperties }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') { setError('Only PDF files allowed'); return; }
+    if (file.size > 50 * 1024 * 1024) { setError('File too large (max 50MB)'); return; }
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const token = typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${BASE_URL}/upload/catalog-pdf`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      onUploaded(data.url);
+      setSuccess(`✅ Uploaded: ${file.name}`);
+    } catch (err: any) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: '16px', background: C.bg, borderRadius: 12, border: `2px dashed ${C.border}` }}>
+      <label style={lbl}>Upload New Catalog PDF</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <label style={{ cursor: uploading ? 'not-allowed' : 'pointer', background: '#2563EB', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
+          {uploading ? '⏳ Uploading...' : '📤 Choose PDF'}
+          <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
+        </label>
+        <span style={{ fontSize: 12, color: C.muted }}>Max 50MB · PDF only</span>
+      </div>
+      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>❌ {error}</div>}
+      {success && <div style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>{success}</div>}
+    </div>
+  );
+}
 
 export default function AppSettings({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
@@ -185,6 +240,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     { id: 'features', label: '🔧 Features', Icon: Shield },
     { id: 'links', label: '🔗 Links', Icon: Globe },
     { id: 'rateus', label: '⭐ Rate Us', Icon: Star },
+    { id: 'catalog', label: '📄 Catalog PDF', Icon: Globe },
     { id: 'notifications', label: '🔔 Push Notifications', Icon: Bell },
   ];
 
@@ -441,6 +497,46 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                   <strong>Note:</strong> The rating prompt will only show to users who have completed at least {config.rateUsMinScans} scans. 
                   If dismissed, it will reappear after {config.rateUsPromptDelay} days.
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'catalog' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📄 Product Catalog PDF</div>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>
+                Upload a PDF catalog that users can download from the app home screen.
+              </div>
+
+              {/* Current PDF URL */}
+              <div style={{ padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                <label style={lbl}>Current Catalog PDF URL</label>
+                <input
+                  style={inp}
+                  value={config.catalogPdfUrl}
+                  onChange={e => f('catalogPdfUrl', e.target.value)}
+                  placeholder="https://... (paste URL or upload below)"
+                />
+                {config.catalogPdfUrl && (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <a href={config.catalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
+                      📄 Preview current catalog
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload new PDF */}
+              {canEdit && (
+                <CatalogPdfUploader
+                  onUploaded={(url) => f('catalogPdfUrl', url)}
+                  C={C}
+                  lbl={lbl}
+                />
+              )}
+
+              <div style={{ padding: '14px', background: '#DBEAFE', borderRadius: 10, border: '1px solid #93C5FD', fontSize: 12, color: '#1E40AF' }}>
+                <strong>💡 How it works:</strong> Upload a PDF here → click &quot;Save All&quot; → the catalog URL is saved to settings → all app users see a &quot;Download Catalog&quot; button on their home screen that opens this PDF.
               </div>
             </div>
           )}

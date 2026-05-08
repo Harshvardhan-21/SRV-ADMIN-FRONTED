@@ -7,7 +7,7 @@ import {
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageSquare, FileText, Megaphone,
-  UserCheck, ClipboardList, Shield, Smartphone,
+  UserCheck, ClipboardList, Shield, Smartphone, Play,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -22,6 +22,8 @@ const NAV_GROUPS = [
     items: [
       { id: 'electricians', label: 'Electricians', Icon: Zap },
       { id: 'dealers', label: 'Dealers', Icon: Store },
+      { id: 'app-users', label: 'Customers', Icon: Users },
+      { id: 'counterboys', label: 'Counter Boys', Icon: UserCheck },
     ]
   },
   {
@@ -65,6 +67,7 @@ const NAV_GROUPS = [
     items: [
       { id: 'banners', label: 'Banners', Icon: ImageIcon },
       { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
+      { id: 'upload-plays', label: 'Upload Plays', Icon: Play },
       { id: 'privacy-policy', label: 'Privacy Policy', Icon: FileText },
       { id: 'promo-section', label: 'Promo Section', Icon: Megaphone },
     ]

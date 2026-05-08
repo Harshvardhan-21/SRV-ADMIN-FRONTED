@@ -1,7 +1,7 @@
-export type UserRole = 'dealer' | 'electrician';
+export type UserRole = 'dealer' | 'electrician' | 'user' | 'counterboy';
 export type AdminRole = 'super_admin' | 'admin' | 'staff';
 export type MemberTier = 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
-export type UserStatus = 'active' | 'pending' | 'inactive';
+export type UserStatus = 'active' | 'pending' | 'inactive' | 'suspended';
 export type ScanMode = 'single' | 'multi';
 
 export interface RolePermissions {
@@ -173,4 +173,74 @@ export interface BannerItem {
   status: 'active' | 'inactive';
   order: number;
   createdAt: string;
+}
+
+export interface AppUser {
+  id: string;
+  name: string;
+  profileImage?: string;
+  phone: string;
+  email?: string;
+  userCode: string;
+  city?: string;
+  state?: string;
+  district?: string;
+  pincode?: string;
+  address?: string;
+  tier: MemberTier;
+  totalPoints: number;
+  walletBalance: number;
+  totalRedemptions: number;
+  status: UserStatus;
+  kycStatus: string;
+  bankLinked: boolean;
+  upiId?: string;
+  bankAccount?: string;
+  ifsc?: string;
+  bankName?: string;
+  accountHolderName?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  aadharDocument?: string;
+  panDocument?: string;
+  kycRejectionReason?: string;
+  joinedDate: string;
+}
+
+export interface CounterBoy {
+  id: string;
+  name: string;
+  profileImage?: string;
+  phone: string;
+  email?: string;
+  counterboyCode: string;
+  city?: string;
+  state?: string;
+  district?: string;
+  pincode?: string;
+  address?: string;
+  dealerId?: string;
+  dealerName?: string;
+  dealerPhone?: string;
+  dealerCode?: string;
+  totalScans: number;
+  totalPoints: number;
+  walletBalance: number;
+  totalRedemptions: number;
+  bankLinked: boolean;
+  upiId?: string;
+  bankAccount?: string;
+  ifsc?: string;
+  bankName?: string;
+  accountHolderName?: string;
+  tier?: MemberTier;
+  recentActivity?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  aadharDocument?: string;
+  panDocument?: string;
+  kycRejectionReason?: string;
+  status: UserStatus;
+  kycStatus: string;
+  joinedDate: string;
 }

@@ -28,6 +28,8 @@ const MODULE_MAP: Record<string, string> = {
   'dashboard': 'View Dashboard',
   'electricians': 'Manage Electricians',
   'dealers': 'Manage Dealers',
+  'app_users': 'Manage Customers',
+  'counterboys': 'Manage Counter Boys',
   'products': 'Manage Products',
   'qr_codes': 'Manage QR Codes',
   'gifts': 'Manage Gifts',
@@ -52,6 +54,10 @@ function getRoleModulePermission(role: AdminRole, module: string): ModulePermiss
     }
 
     if (module === 'qr_codes') {
+      return { module, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: true };
+    }
+
+    if (module === 'app_users' || module === 'counterboys') {
       return { module, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: true };
     }
 

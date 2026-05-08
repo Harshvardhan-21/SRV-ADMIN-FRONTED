@@ -10,6 +10,8 @@ export type ModuleName =
   | 'notifications'
   | 'electricians'
   | 'dealers'
+  | 'app_users'
+  | 'counterboys'
   | 'reports'
   | 'settings'
   | 'finance'
@@ -39,6 +41,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     notifications: { view: true, create: true, edit: true, delete: true, export: true },
     electricians: { view: true, create: true, edit: true, delete: true, export: true },
     dealers: { view: true, create: true, edit: true, delete: true, export: true },
+    app_users: { view: true, create: true, edit: true, delete: true, export: true },
+    counterboys: { view: true, create: true, edit: true, delete: true, export: true },
     reports: { view: true, create: true, edit: true, delete: true, export: true },
     settings: { view: true, create: true, edit: true, delete: true, export: true },
     finance: { view: true, create: true, edit: true, delete: true, export: true },
@@ -46,7 +50,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     support: { view: true, create: true, edit: true, delete: true, export: true },
   },
   admin: {
-    // By default, admin has NO permissions (all false)
     products: { view: false, create: false, edit: false, delete: false, export: false },
     categories: { view: false, create: false, edit: false, delete: false, export: false },
     qr_codes: { view: false, create: false, edit: false, delete: false, export: false },
@@ -55,6 +58,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     notifications: { view: false, create: false, edit: false, delete: false, export: false },
     electricians: { view: false, create: false, edit: false, delete: false, export: false },
     dealers: { view: false, create: false, edit: false, delete: false, export: false },
+    app_users: { view: true, create: true, edit: true, delete: false, export: true },
+    counterboys: { view: true, create: true, edit: true, delete: false, export: true },
     reports: { view: false, create: false, edit: false, delete: false, export: false },
     settings: { view: false, create: false, edit: false, delete: false, export: false },
     finance: { view: false, create: false, edit: false, delete: false, export: false },
@@ -62,7 +67,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     support: { view: false, create: false, edit: false, delete: false, export: false },
   },
   staff: {
-    // By default, staff has NO permissions (all false)
     products: { view: false, create: false, edit: false, delete: false, export: false },
     categories: { view: false, create: false, edit: false, delete: false, export: false },
     qr_codes: { view: false, create: false, edit: false, delete: false, export: false },
@@ -71,6 +75,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     notifications: { view: false, create: false, edit: false, delete: false, export: false },
     electricians: { view: false, create: false, edit: false, delete: false, export: false },
     dealers: { view: false, create: false, edit: false, delete: false, export: false },
+    app_users: { view: false, create: false, edit: false, delete: false, export: false },
+    counterboys: { view: false, create: false, edit: false, delete: false, export: false },
     reports: { view: false, create: false, edit: false, delete: false, export: false },
     settings: { view: false, create: false, edit: false, delete: false, export: false },
     finance: { view: false, create: false, edit: false, delete: false, export: false },
@@ -89,6 +95,8 @@ export const MODULE_LABELS: Record<ModuleName, string> = {
   notifications: 'Notifications',
   electricians: 'Electricians',
   dealers: 'Dealers',
+  app_users: 'Customers',
+  counterboys: 'Counter Boys',
   reports: 'Reports',
   settings: 'Settings',
   finance: 'Finance',

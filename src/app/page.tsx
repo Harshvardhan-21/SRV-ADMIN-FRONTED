@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, Megaphone, ClipboardList } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, Megaphone, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import Sidebar from '@/components/Shared/Sidebar';
 import Dashboard from '@/components/Overview/Dashboard';
@@ -21,11 +21,14 @@ import Referrals from '@/components/Engagement/Referrals';
 import Testimonials from '@/components/Content/Testimonials';
 import PrivacyPolicy from '@/components/Content/PrivacyPolicy';
 import PromoSection from '@/components/Content/PromoSection';
+import UploadPlays from '@/components/Content/UploadPlays';
 import EnquirySupport from '@/components/Support/EnquirySupport';
 import Login from '@/components/Shared/Login';
 import { PointsConfig, Reports, ScanHistory, Redemptions } from '@/components/System/Sections';
 import AdminSettings from '@/components/System/AdminSettings';
 import AppSettings from '@/components/System/AppSettings';
+import AppUserHub from '@/components/AppUser/AppUserHub';
+import CounterBoyHub from '@/components/CounterBoy/CounterBoyHub';
 import { exportRowsToExcel } from '@/lib/excel';
 import { useAppContext } from '@/lib/appContext';
 
@@ -42,6 +45,8 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   dashboard: { title: 'Dashboard', Icon: LayoutDashboard },
   electricians: { title: 'Electricians', Icon: Zap },
   dealers: { title: 'Dealers', Icon: Store },
+  'app-users': { title: 'Customers', Icon: Users },
+  counterboys: { title: 'Counter Boys', Icon: UserCheck },
   products: { title: 'Products', Icon: Package },
   'product-categories': { title: 'Product Categories', Icon: Tag },
   'points-config': { title: 'Products Points', Icon: Star },
@@ -52,6 +57,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'redemption-requests': { title: 'Redemption Requests', Icon: ClipboardList },
   'pending-registrations': { title: 'Pending Registrations', Icon: UserCheck },
   'notifications': { title: 'Notifications', Icon: Bell },
+  'upload-plays': { title: 'Upload Plays', Icon: Play },
   'banners': { title: 'Banners', Icon: ImageIcon },
   'transfer-points': { title: 'Transfer Points', Icon: ArrowLeftRight },
   'commissions': { title: 'Dealer Bonus', Icon: Percent },
@@ -281,6 +287,8 @@ export default function Home() {
       case 'dashboard': return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => setElectricianSubPage(sp)} />;
       case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => setDealerSubPage(sp)} />;
+      case 'app-users': return <AppUserHub role={role} />;
+      case 'counterboys': return <CounterBoyHub role={role} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;
       case 'product-categories': return <ProductCategories role={role} onNavigate={(page, category) => {
         if (page === 'products') {
@@ -299,6 +307,7 @@ export default function Home() {
       case 'commissions': return <Commissions role={role} />;
       case 'referrals': return <Referrals role={role} />;
       case 'testimonials': return <Testimonials role={role} />;
+      case 'upload-plays': return <UploadPlays role={role} />;
       case 'privacy-policy': return <PrivacyPolicy role={role} />;
       case 'promo-section': return <PromoSection role={role} />;
       case 'enquiry-support': return <EnquirySupport />;
