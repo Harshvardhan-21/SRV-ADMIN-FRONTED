@@ -15,10 +15,10 @@ interface Banner {
   resizeMode: 'cover' | 'contain';
   isActive: boolean;
   displayOrder: number;
-  targetRole: ('Electrician' | 'Dealer' | 'Both')[];
+  targetRole: ('Electrician' | 'Dealer' | 'Customer' | 'CounterBoy' | 'All')[];
 }
 
-const EMPTY_FORM = { title: '', imageUrl: '', bgColor: '#FFFFFF', resizeMode: 'contain' as 'cover' | 'contain', isActive: true, displayOrder: 1, targetRole: ['Both'] as ('Electrician' | 'Dealer' | 'Both')[] };
+const EMPTY_FORM = { title: '', imageUrl: '', bgColor: '#FFFFFF', resizeMode: 'contain' as 'cover' | 'contain', isActive: true, displayOrder: 1, targetRole: ['All'] as ('Electrician' | 'Dealer' | 'Customer' | 'CounterBoy' | 'All')[] };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/api\/v1\/?$/, '');
 
@@ -145,7 +145,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
     setDeleteId(null);
   };
 
-  const toggleRole = (role: 'Electrician' | 'Dealer' | 'Both') => {
+  const toggleRole = (role: 'Electrician' | 'Dealer' | 'Customer' | 'CounterBoy' | 'All') => {
     setForm(f => {
       const has = f.targetRole.includes(role);
       return { ...f, targetRole: has ? f.targetRole.filter(r => r !== role) : [...f.targetRole, role] };
@@ -213,7 +213,12 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
               <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>{banner.title}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {banner.targetRole.map(role => (
-                  <span key={role} style={{ background: C.accentSoft, color: C.accentText, border: `1px solid ${C.accentSoftBorder}`, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6 }}>{role}</span>
+                  <span key={role} style={{ 
+                    background: role === 'Customer' ? '#FBF1E7' : role === 'CounterBoy' ? '#FEE2E2' : role === 'All' ? '#DCFCE7' : C.accentSoft, 
+                    color: role === 'Customer' ? '#6A2F12' : role === 'CounterBoy' ? '#991B1B' : role === 'All' ? '#166534' : C.accentText, 
+                    border: `1px solid ${role === 'Customer' ? '#E5D4C1' : role === 'CounterBoy' ? '#FECACA' : role === 'All' ? '#86EFAC' : C.accentSoftBorder}`, 
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6 
+                  }}>{role}</span>
                 ))}
                 <span style={{ background: C.surface, color: C.muted, border: `1px solid ${C.border}`, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6 }}>{banner.resizeMode}</span>
               </div>
@@ -311,11 +316,11 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
               </div>
               <div>
                 <label style={labelStyle}>Target Role</label>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {(['Electrician', 'Dealer', 'Both'] as const).map(role => (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {(['All', 'Electrician', 'Dealer', 'Customer', 'CounterBoy'] as const).map(role => (
                     <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: C.text }}>
                       <input type="checkbox" checked={form.targetRole.includes(role)} onChange={() => toggleRole(role)} style={{ accentColor: C.red }} />
-                      {role}
+                      {role === 'All' ? '🌐 All' : role === 'Electrician' ? '⚡ Electrician' : role === 'Dealer' ? '🏪 Dealer' : role === 'Customer' ? '👤 Customer' : '🧾 CounterBoy'}
                     </label>
                   ))}
                 </div>
