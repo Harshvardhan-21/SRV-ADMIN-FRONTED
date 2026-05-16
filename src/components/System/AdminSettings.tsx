@@ -676,7 +676,7 @@ export default function AdminSettings() {
                             setPermSaved(true);
                             setTimeout(() => setPermSaved(false), 3000);
                             await loadAdmins(); // Reload to show updated permissions
-                          } catch (err) {
+                          } catch (err: any) {
                             console.error('Failed to save permissions:', err);
                             alert(`Failed to save permissions: ${err.message || 'Please try again.'}`);
                           } finally {

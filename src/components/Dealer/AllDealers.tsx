@@ -452,12 +452,18 @@ export default function Dealers({ role }: DealersProps) {
       gstNumber: form.gstNumber && form.gstNumber.trim() !== '' ? form.gstNumber : undefined,
       upiId: form.upiId && form.upiId.trim() !== '' ? form.upiId : undefined,
       profileImage: form.profileImage && form.profileImage.trim() !== '' ? form.profileImage : undefined,
+      bankLinked: form.bankLinked,
+      monthlyTarget: typeof form.monthlyTarget === 'number' ? form.monthlyTarget : undefined,
+      electricianCount: typeof form.electricianCount === 'number' ? form.electricianCount : undefined,
       salesManName: form.salesManName && form.salesManName.trim() !== '' ? form.salesManName : undefined,
       townCode: form.townCode && form.townCode.trim() !== '' ? form.townCode : undefined,
       rtoCode: form.rtoCode && form.rtoCode.trim() !== '' ? form.rtoCode : undefined,
       listCode: form.listCode && form.listCode.trim() !== '' ? form.listCode : undefined,
       electricianList: form.electricianList && form.electricianList.trim() !== '' ? form.electricianList : undefined,
     };
+    if (!showAdd) {
+      (dealerData as any).achievedTarget = typeof form.achievedTarget === 'number' ? form.achievedTarget : undefined;
+    }
     try {
       if (showAdd) {
         await dealerApi.create(dealerData);

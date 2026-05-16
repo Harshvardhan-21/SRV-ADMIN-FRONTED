@@ -319,7 +319,7 @@ export default function UploadPlays({ role }: { role?: string }) {
     setLoadingViewers(true);
     setViewersModal({ play, data: null });
     try {
-      const data = await req(`/plays/${play.id}/viewers`);
+      const data = await req(`/plays/${play.id}/viewers`) as ViewersModalData;
       setViewersModal({ play, data });
     } catch {
       setViewersModal({ play, data: { viewers: [], uniqueViewers: 0, totalViews: 0 } });

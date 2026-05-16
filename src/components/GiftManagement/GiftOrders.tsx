@@ -139,7 +139,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <ConfirmDialog show={confirmState.show} title={confirmState.action === 'approve' ? 'Approve Order' : 'Reject Order'} message={`Are you sure you want to ${confirmState.action} this gift order?`} onConfirm={confirmAction} onCancel={() => setConfirmState({ show: false, id: 0, action: 'approve' })} type={confirmState.action === 'approve' ? 'success' : 'danger'} />
+      <ConfirmDialog show={confirmState.show} title={confirmState.action === 'approve' ? 'Approve Order' : 'Reject Order'} message={`Are you sure you want to ${confirmState.action} this gift order?`} onConfirm={confirmAction} onCancel={() => setConfirmState({ show: false, id: '', action: 'approve' })} type={confirmState.action === 'approve' ? 'success' : 'danger'} />
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title={tab === 'electrician' ? 'Electrician Gift Orders' : 'Dealer Gift Orders'} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status }))} />
 

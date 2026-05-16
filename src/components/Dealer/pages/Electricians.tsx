@@ -200,6 +200,14 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
     onSave({ ...form as Electrician, id: `e${Date.now()}`, electricianCode: code });
   };
 
+  const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => f('profileImage', String(reader.result ?? ''));
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
       <div style={{ background: C.card, borderRadius: 20, width: 680, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>

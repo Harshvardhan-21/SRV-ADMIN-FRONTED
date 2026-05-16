@@ -46,6 +46,8 @@ export interface Electrician {
   walletBalance: number;
   totalRedemptions: number;
   subCategory: ElectricianSubCategory;
+  bankName?: string;
+  accountHolderName?: string;
 }
 
 export interface Dealer {
