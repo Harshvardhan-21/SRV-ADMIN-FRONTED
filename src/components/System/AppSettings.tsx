@@ -23,6 +23,7 @@ interface AppConfig {
   dealerCommissionRate: number;
   // App Features
   scanEnabled: boolean; giftsEnabled: boolean; referralEnabled: boolean; transferPointsEnabled: boolean;
+  testimonialsEnabled: boolean; playEnabled: boolean;
   // Links
   privacyPolicyUrl: string; termsUrl: string; playStoreUrl: string; appStoreUrl: string;
   // Rate Us
@@ -30,7 +31,8 @@ interface AppConfig {
   // Language
   defaultLanguage: string; forceUpdate: boolean;
   // Catalog
-  catalogPdfUrl: string;
+  generalCatalogPdfUrl: string;
+  dealerCatalogPdfUrl: string;
 }
 
 const INITIAL: AppConfig = {
@@ -43,11 +45,13 @@ const INITIAL: AppConfig = {
   dealerSilverMin: 0, dealerGoldMin: 11, dealerPlatinumMin: 26, dealerDiamondMin: 51,
   dealerCommissionRate: 5,
   scanEnabled: true, giftsEnabled: true, referralEnabled: true, transferPointsEnabled: true,
+  testimonialsEnabled: true, playEnabled: true,
   privacyPolicyUrl: 'https://srvelectricals.com/privacy', termsUrl: 'https://srvelectricals.com/terms',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.srvelectricals', appStoreUrl: 'https://apps.apple.com/app/srv-electricals',
   rateUsEnabled: true, rateUsMinScans: 5, rateUsPromptDelay: 3, playStoreRatingUrl: 'market://details?id=com.srvelectricals', appStoreRatingUrl: 'https://apps.apple.com/app/srv-electricals',
   defaultLanguage: 'English', forceUpdate: false,
-  catalogPdfUrl: '',
+  generalCatalogPdfUrl: '',
+  dealerCatalogPdfUrl: '',
 };
 
 function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) => void; C: any; lbl: React.CSSProperties }) {
@@ -140,6 +144,9 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
             else (next as any)[k] = v;
           }
         });
+        if (!next.generalCatalogPdfUrl && map.catalogPdfUrl !== undefined) {
+          next.generalCatalogPdfUrl = map.catalogPdfUrl;
+        }
         return next;
       });
     }).catch(console.error).finally(() => setLoading(false));
@@ -160,9 +167,10 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
       setConfig(normalizedConfig);
       await Promise.all(
-        Object.entries(normalizedConfig).map(([key, value]) =>
-          settingsApi.update(key, String(value))
-        )
+        Object.entries({
+          ...normalizedConfig,
+          catalogPdfUrl: normalizedConfig.generalCatalogPdfUrl,
+        }).map(([key, value]) => settingsApi.update(key, String(value)))
       );
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -392,6 +400,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 { key: 'giftsEnabled', label: 'Gift Store', desc: 'Show gift store and allow gift redemptions' },
                 { key: 'referralEnabled', label: 'Referral System', desc: 'Allow users to refer friends and earn bonus points' },
                 { key: 'transferPointsEnabled', label: 'Transfer Points', desc: 'Allow electricians to transfer points to dealers' },
+                { key: 'testimonialsEnabled', label: 'Testimonials Section', desc: 'Show testimonials section on all home screens in the app' },
+                { key: 'playEnabled', label: '▶️ Play Zone (Videos)', desc: 'Enable the Play Zone video section for customers. Disable to show a "Coming Soon" screen instead.' },
               ].map(item => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
                   <div>
@@ -503,24 +513,24 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'catalog' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📄 Product Catalog PDF</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📄 Product Catalog PDFs</div>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>
-                Upload a PDF catalog that users can download from the app home screen.
+                Upload separate PDF catalogs for dealers and for all other app users.
               </div>
 
               {/* Current PDF URL */}
               <div style={{ padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
-                <label style={lbl}>Current Catalog PDF URL</label>
+                <label style={lbl}>General Catalog PDF URL</label>
                 <input
                   style={inp}
-                  value={config.catalogPdfUrl}
-                  onChange={e => f('catalogPdfUrl', e.target.value)}
-                  placeholder="https://... (paste URL or upload below)"
+                  value={config.generalCatalogPdfUrl}
+                  onChange={e => f('generalCatalogPdfUrl', e.target.value)}
+                  placeholder="https://... (electrician, customer, counter boy)"
                 />
-                {config.catalogPdfUrl && (
+                {config.generalCatalogPdfUrl && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <a href={config.catalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
-                      📄 Preview current catalog
+                    <a href={config.generalCatalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
+                      📄 Preview general catalog
                     </a>
                   </div>
                 )}
@@ -529,14 +539,39 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               {/* Upload new PDF */}
               {canEdit && (
                 <CatalogPdfUploader
-                  onUploaded={(url) => f('catalogPdfUrl', url)}
+                  onUploaded={(url) => f('generalCatalogPdfUrl', url)}
+                  C={C}
+                  lbl={lbl}
+                />
+              )}
+
+              <div style={{ padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                <label style={lbl}>Dealer Catalog PDF URL</label>
+                <input
+                  style={inp}
+                  value={config.dealerCatalogPdfUrl}
+                  onChange={e => f('dealerCatalogPdfUrl', e.target.value)}
+                  placeholder="https://... (dealer catalog)"
+                />
+                {config.dealerCatalogPdfUrl && (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <a href={config.dealerCatalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
+                      📄 Preview dealer catalog
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {canEdit && (
+                <CatalogPdfUploader
+                  onUploaded={(url) => f('dealerCatalogPdfUrl', url)}
                   C={C}
                   lbl={lbl}
                 />
               )}
 
               <div style={{ padding: '14px', background: '#DBEAFE', borderRadius: 10, border: '1px solid #93C5FD', fontSize: 12, color: '#1E40AF' }}>
-                <strong>💡 How it works:</strong> Upload a PDF here → click &quot;Save All&quot; → the catalog URL is saved to settings → all app users see a &quot;Download Catalog&quot; button on their home screen that opens this PDF.
+                <strong>💡 How it works:</strong> Upload dealer and general PDFs here → click &quot;Save All&quot; → dealer users get the dealer catalog, while electrician, customer and counter boy users get the general catalog.
               </div>
             </div>
           )}

@@ -84,6 +84,7 @@ const NAV_GROUPS = [
       { id: 'reports', label: 'Reports', Icon: BarChart2 },
       { id: 'admin-settings', label: 'Admin Settings', Icon: Shield },
       { id: 'app-settings', label: 'App Settings', Icon: Smartphone },
+      { id: 'app-page-controls', label: 'App Page Controls', Icon: Smartphone },
     ]
   },
 ];

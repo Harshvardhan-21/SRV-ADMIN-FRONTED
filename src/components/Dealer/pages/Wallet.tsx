@@ -16,6 +16,9 @@ interface Transaction {
   balanceAfter: number;
   description: string;
   createdAt: string;
+  userName?: string;
+  userPhone?: string;
+  userCode?: string;
 }
 
 export default function WalletHistory() {
@@ -23,17 +26,57 @@ export default function WalletHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
+  const [search, setSearch] = useState('');
   const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
-    walletApi.getTransactions({ userRole: 'dealer', limit: '500' }).then(res => {
-      setTransactions(Array.isArray(res) ? res : (res as any).data ?? []);
-    }).catch(console.error).finally(() => setLoading(false));
+    const fetchData = async () => {
+      try {
+        const res = await walletApi.getTransactions({ userRole: 'dealer', limit: '500' });
+        const txns = Array.isArray(res) ? res : (res as any).data ?? [];
+        
+        // Fetch user details for each transaction
+        const enrichedTxns = await Promise.all(
+          txns.map(async (t: any) => {
+            try {
+              const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${t.userId}`);
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                return {
+                  ...t,
+                  userName: userData.name || userData.fullName || 'N/A',
+                  userPhone: userData.phone || userData.mobile || 'N/A',
+                  userCode: userData.dealerCode || userData.code || 'N/A'
+                };
+              }
+            } catch (err) {
+              console.error('Error fetching user:', err);
+            }
+            return { ...t, userName: 'N/A', userPhone: 'N/A', userCode: 'N/A' };
+          })
+        );
+        
+        setTransactions(enrichedTxns);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
-  const filtered = transactions.filter(t =>
-    filterType === 'all' || t.type === filterType
-  );
+  const filtered = transactions.filter(t => {
+    const matchSearch = 
+      (t.userId ?? '').toLowerCase().includes(search.toLowerCase()) || 
+      (t.description ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (t.userName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (t.userPhone ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (t.userCode ?? '').toLowerCase().includes(search.toLowerCase());
+    const matchType = filterType === 'all' || t.type === filterType;
+    return matchSearch && matchType;
+  });
 
   const totalCredit = filtered.filter(t => t.type === 'credit').reduce((a, t) => a + Number(t.amount), 0);
   const totalDebit = filtered.filter(t => t.type === 'debit').reduce((a, t) => a + Number(t.amount), 0);
@@ -49,7 +92,7 @@ export default function WalletHistory() {
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer Wallet" fileName="dealer-wallet" getData={() => transactions.map(t => ({ UserId: t.userId, Type: t.type, Source: t.source, Description: t.description, Amount: t.amount, BalanceBefore: t.balanceBefore, BalanceAfter: t.balanceAfter, Date: t.createdAt }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer Wallet" fileName="dealer-wallet" getData={() => transactions.map(t => ({ Name: t.userName, Phone: t.userPhone, Code: t.userCode, UserId: t.userId, Type: t.type, Source: t.source, Description: t.description, Amount: t.amount, BalanceBefore: t.balanceBefore, BalanceAfter: t.balanceAfter, Date: t.createdAt }))} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
         {[
@@ -68,6 +111,7 @@ export default function WalletHistory() {
       </div>
 
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, phone, code, user ID..." style={{ ...inputStyle, flex: 1, minWidth: 220 }} />
         <select value={filterType} onChange={e => setFilterType(e.target.value)} style={inputStyle}>
           <option value="all">All Types</option>
           <option value="credit">Credit</option>
@@ -83,20 +127,22 @@ export default function WalletHistory() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-                {['Date', 'User ID', 'Type', 'Source', 'Description', 'Amount', 'Balance After'].map(h => (
+                {['Date', 'Name', 'Phone', 'Code', 'Type', 'Source', 'Description', 'Amount', 'Balance After'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No transactions found</td></tr>
+                <tr><td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No transactions found</td></tr>
               ) : filtered.map(t => (
                 <tr key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}
                   onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                   onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(t.createdAt).toLocaleDateString('en-IN')}</td>
-                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{t.userId.slice(0, 8)}…</td>
+                  <td style={{ padding: '13px 16px', fontSize: 13, color: C.text, fontWeight: 600 }}>{t.userName || 'N/A'}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{t.userPhone || 'N/A'}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontWeight: 600 }}>{t.userCode || 'N/A'}</td>
                   <td style={{ padding: '13px 16px' }}>
                     <span style={{ background: t.type === 'credit' ? '#D1FAE5' : '#FEE2E2', color: t.type === 'credit' ? '#065F46' : '#991B1B', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       {t.type === 'credit' ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}

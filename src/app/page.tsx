@@ -27,6 +27,7 @@ import Login from '@/components/Shared/Login';
 import { PointsConfig, Reports, ScanHistory, Redemptions } from '@/components/System/Sections';
 import AdminSettings from '@/components/System/AdminSettings';
 import AppSettings from '@/components/System/AppSettings';
+import AppPageControls from '@/components/System/AppPageControls';
 import AppUserHub from '@/components/AppUser/AppUserHub';
 import CounterBoyHub from '@/components/CounterBoy/CounterBoyHub';
 import { exportRowsToExcel } from '@/lib/excel';
@@ -69,6 +70,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   scans: { title: 'Scan History', Icon: ScanLine },
   redemptions: { title: 'Redemptions', Icon: Gift },
   reports: { title: 'Reports', Icon: BarChart2 },
+  'app-page-controls': { title: 'App Page Controls', Icon: Smartphone },
   };
 
 export default function Home() {
@@ -316,6 +318,7 @@ export default function Home() {
       case 'reports': return <Reports />;
       case 'admin-settings': return role === 'super_admin' ? <AdminSettings /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'app-settings': return <AppSettings role={role} />;
+      case 'app-page-controls': return <AppPageControls role={role} />;
       default: return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
     }
   };

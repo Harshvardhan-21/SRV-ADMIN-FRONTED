@@ -57,7 +57,7 @@ export default function CounterBoyHub({ role, defaultPage, onSubPageChange }: Co
     <div style={{ minHeight: '100vh', background: C.bg }}>
       {/* Sub-page Navigation */}
       <div style={{ background: C.subNavBg, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 40, boxShadow: C.shadow }}>
-        <div style={{ padding: '0 32px', display: 'flex', gap: 0, overflowX: 'auto', scrollBehavior: 'smooth', msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}>
+        <div style={{ padding: '0 32px', display: 'flex', gap: 0, overflowX: 'auto', scrollBehavior: 'smooth', msOverflowStyle: 'none', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {subPages.map(page => {
             const isActive = activePage === page.id;
             const PageIcon = page.Icon;
@@ -65,7 +65,7 @@ export default function CounterBoyHub({ role, defaultPage, onSubPageChange }: Co
               <button
                 key={page.id}
                 onClick={() => handlePageChange(page.id)}
-                style={{ padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: isActive ? `3px solid ${C.red}` : '3px solid transparent', color: isActive ? C.red : C.muted, fontWeight: isActive ? 600 : 500, fontSize: 13, whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                style={{ padding: '16px 20px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: isActive ? `3px solid ${C.red}` : '3px solid transparent', color: isActive ? C.red : C.muted, fontWeight: isActive ? 600 : 500, fontSize: 13, whiteSpace: 'nowrap', transition: 'all 0.2s', flexShrink: 0 }}
               >
                 <PageIcon size={16} />
                 {page.label}
@@ -73,6 +73,11 @@ export default function CounterBoyHub({ role, defaultPage, onSubPageChange }: Co
             );
           })}
         </div>
+        <style>{`
+          div[style*="overflowX: auto"]::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
       </div>
 
       <div style={{ padding: 0, overflowX: 'hidden' }}>

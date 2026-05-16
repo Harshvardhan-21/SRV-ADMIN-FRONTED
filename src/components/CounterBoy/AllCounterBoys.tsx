@@ -668,19 +668,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           </div>
         )}
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 24 }}>
-        {[
-          { title: 'Scan Ready', value: `${counterBoys.filter(counterBoy => (counterBoy.totalScans ?? 0) > 0).length} active scanners`, icon: <ScanLine size={18} color="#3B82F6" /> },
-          { title: 'Wallet Active', value: `${counterBoys.filter(counterBoy => (counterBoy.walletBalance ?? 0) > 0).length} wallets`, icon: <Wallet size={18} color="#10B981" /> },
-          { title: 'Dealer Linked', value: `${counterBoys.filter(counterBoy => !!counterBoy.dealerName).length} linked counter boys`, icon: <ScanLine size={18} color="#8B5CF6" /> },
-        ].map(card => (
-          <div key={card.title} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>{card.icon}<span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{card.title}</span></div>
-            <div style={{ fontSize: 13, color: C.muted }}>{card.value}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
