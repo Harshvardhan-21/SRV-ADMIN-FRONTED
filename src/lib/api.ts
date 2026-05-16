@@ -157,6 +157,10 @@ export const electricianApi = {
   delete: (id: string) => request<void>(`/electricians/${id}`, { method: 'DELETE' }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/electricians/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  importMany: (records: any[]) =>
+    request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
+      '/electricians/import', { method: 'POST', body: JSON.stringify({ records }) }
+    ),
 };
 
 // ─── Dealers ──────────────────────────────────────────────────────────────────
@@ -175,6 +179,10 @@ export const dealerApi = {
   delete: (id: string) => request<void>(`/dealers/${id}`, { method: 'DELETE' }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/dealers/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  importMany: (records: any[]) =>
+    request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
+      '/dealers/import', { method: 'POST', body: JSON.stringify({ records }) }
+    ),
 };
 
 // ─── Products ─────────────────────────────────────────────────────────────────
@@ -431,6 +439,10 @@ export const appUserApi = {
   updateStatus: (id: string, status: string) =>
     request<any>(`/app-users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: string) => request<void>(`/app-users/${id}`, { method: 'DELETE' }),
+  importMany: (records: any[]) =>
+    request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
+      '/app-users/import', { method: 'POST', body: JSON.stringify({ records }) }
+    ),
 };
 
 // ─── Counter Boys ─────────────────────────────────────────────────────────────
@@ -447,6 +459,10 @@ export const counterboyApi = {
   updateStatus: (id: string, status: string) =>
     request<any>(`/counterboys/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: string) => request<void>(`/counterboys/${id}`, { method: 'DELETE' }),
+  importMany: (records: any[]) =>
+    request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
+      '/counterboys/import', { method: 'POST', body: JSON.stringify({ records }) }
+    ),
 };
 
 export const referralApi = {

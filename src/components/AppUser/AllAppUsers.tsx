@@ -9,6 +9,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
+import ImportModal from '@/components/Shared/ImportModal';
 
 interface AllAppUsersProps {
   role: AdminRole;
@@ -313,6 +314,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const [statusFilter, setStatusFilter] = useState('');
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
   const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [viewing, setViewing] = useState<AppUser | null>(null);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -467,6 +469,18 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
         }))}
       />
 
+      <ImportModal
+        show={showImport}
+        onClose={() => setShowImport(false)}
+        title="Customers"
+        onImport={async (records) => {
+          const res = await appUserApi.importMany(records);
+          load();
+          loadStats();
+          return res;
+        }}
+      />
+
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, margin: 0 }}>Customers</h1>
@@ -476,6 +490,11 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           {canExport && (
             <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
               Export
+            </button>
+          )}
+          {canExport && (
+            <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Import
             </button>
           )}
           {canCreate && (

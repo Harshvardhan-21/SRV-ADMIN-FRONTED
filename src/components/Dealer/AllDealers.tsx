@@ -9,6 +9,7 @@ import { useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
+import ImportModal from '@/components/Shared/ImportModal';
 
 interface DealersProps {
   role: AdminRole;
@@ -152,6 +153,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
   const [form, setForm] = useState<Partial<Dealer>>(dealer ?? {
     name: '', profileImage: '', phone: '', email: '', dealerCode: '', town: '', district: '', state: '', address: '', pincode: '',
     tier: 'Silver', status: 'active', electricianCount: 0, gstNumber: '', bankLinked: false, upiId: '', monthlyTarget: 0, achievedTarget: 0, contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
+    salesManName: '', townCode: '', rtoCode: '', listCode: '', electricianList: '',
   });
   const f = (k: keyof Dealer, v: unknown) => setForm(p => ({ ...p, [k]: v }));
   const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,6 +274,13 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
             {!isAdd && (
               <div><label style={labelStyle}>Achieved Target (₹)</label><input style={inputStyle} type="number" value={form.achievedTarget ?? ''} onChange={e => f('achievedTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
             )}
+
+            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>📋 Import Fields</div></div>
+            <div><label style={labelStyle}>Sales Man Name</label><input style={inputStyle} value={form.salesManName ?? ''} onChange={e => f('salesManName', e.target.value)} placeholder="Sales man name" /></div>
+            <div><label style={labelStyle}>Town Code</label><input style={inputStyle} value={form.townCode ?? ''} onChange={e => f('townCode', e.target.value)} placeholder="Town code" /></div>
+            <div><label style={labelStyle}>RTO Code</label><input style={inputStyle} value={form.rtoCode ?? ''} onChange={e => f('rtoCode', e.target.value)} placeholder="RTO code" /></div>
+            <div><label style={labelStyle}>List Code</label><input style={inputStyle} value={form.listCode ?? ''} onChange={e => f('listCode', e.target.value)} placeholder="List code" /></div>
+            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Electrician List</label><textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 50 } as React.CSSProperties} value={form.electricianList ?? ''} onChange={e => f('electricianList', e.target.value)} placeholder="Electrician list (comma separated)" /></div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
@@ -391,6 +400,7 @@ export default function Dealers({ role }: DealersProps) {
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [viewing, setViewing] = useState<Dealer | null>(null);
   const [editing, setEditing] = useState<Dealer | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
@@ -442,6 +452,11 @@ export default function Dealers({ role }: DealersProps) {
       gstNumber: form.gstNumber && form.gstNumber.trim() !== '' ? form.gstNumber : undefined,
       upiId: form.upiId && form.upiId.trim() !== '' ? form.upiId : undefined,
       profileImage: form.profileImage && form.profileImage.trim() !== '' ? form.profileImage : undefined,
+      salesManName: form.salesManName && form.salesManName.trim() !== '' ? form.salesManName : undefined,
+      townCode: form.townCode && form.townCode.trim() !== '' ? form.townCode : undefined,
+      rtoCode: form.rtoCode && form.rtoCode.trim() !== '' ? form.rtoCode : undefined,
+      listCode: form.listCode && form.listCode.trim() !== '' ? form.listCode : undefined,
+      electricianList: form.electricianList && form.electricianList.trim() !== '' ? form.electricianList : undefined,
     };
     try {
       if (showAdd) {
@@ -489,6 +504,9 @@ export default function Dealers({ role }: DealersProps) {
           <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             📤 Export
           </button>
+          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            📥 Import
+          </button>
           {permissions.canCreate && (
             <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Dealer</button>
           )}
@@ -517,6 +535,18 @@ export default function Dealers({ role }: DealersProps) {
           BankLinked: d.bankLinked ? 'Yes' : 'No',
           JoinedDate: new Date(d.joinedDate).toLocaleDateString('en-IN'),
         }))}
+      />
+
+      <ImportModal
+        show={showImport}
+        onClose={() => setShowImport(false)}
+        title="Dealers"
+        sampleHeaders={['STATE','DISTRICT','DEALER NAME','SHOP/BUSINESS NAME','DEALER ADDRESS','GST/PAN NUMBER','PHONE NO.','SALES MAN NAME','TOWN','TOWN CODE','ELECTRICIAN LIST','LIST CODE','RTO CODE','DEALER CODE']}
+        onImport={async (records) => {
+          const res = await dealerApi.importMany(records);
+          await loadData(currentPage);
+          return res;
+        }}
       />
 
       {/* Stats */}

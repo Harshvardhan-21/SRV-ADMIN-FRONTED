@@ -71,6 +71,11 @@ export interface Dealer {
   monthlyTarget?: number;
   achievedTarget?: number;
   contactPerson?: string;
+  salesManName?: string;
+  townCode?: string;
+  rtoCode?: string;
+  listCode?: string;
+  electricianList?: string;
 }
 
 export interface Product {

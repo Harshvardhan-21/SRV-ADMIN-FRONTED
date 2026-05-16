@@ -115,8 +115,34 @@ export default function DealerApprovals() {
       </div>
 
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, background: C.surface }}>
+        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Pending Applications ({pending.length})</h2>
+          {pending.length > 0 && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => {
+                setConfirmState({
+                  show: true, title: 'Approve All', type: 'success',
+                  message: `Approve all ${pending.length} pending dealers?`,
+                  onConfirm: async () => {
+                    await Promise.all(pending.map(d => dealerApi.updateStatus(d.id, 'active')));
+                    setDealers(prev => prev.map(d => d.status === 'pending' ? { ...d, status: 'active' } : d));
+                    setConfirmState(s => ({ ...s, show: false }));
+                  },
+                });
+              }} style={{ background: '#D1FAE5', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}><Check size={14} /> Approve All</button>
+              <button onClick={() => {
+                setConfirmState({
+                  show: true, title: 'Reject All', type: 'danger',
+                  message: `Reject all ${pending.length} pending dealers?`,
+                  onConfirm: async () => {
+                    await Promise.all(pending.map(d => dealerApi.updateStatus(d.id, 'inactive')));
+                    setDealers(prev => prev.map(d => d.status === 'pending' ? { ...d, status: 'inactive' } : d));
+                    setConfirmState(s => ({ ...s, show: false }));
+                  },
+                });
+              }} style={{ background: '#FEE2E2', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6 }}><X size={14} /> Reject All</button>
+            </div>
+          )}
         </div>
         <div style={{ padding: 0 }}>
           {loading ? (

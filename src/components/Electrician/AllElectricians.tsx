@@ -9,6 +9,7 @@ import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
+import ImportModal from '@/components/Shared/ImportModal';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -462,6 +463,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
@@ -562,6 +564,9 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             📤 Export
           </button>
+          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            📥 Import
+          </button>
           {permissions.canCreate && (
             <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
               ＋ Add Electrician
@@ -592,6 +597,17 @@ export default function Electricians({ role }: ElectriciansProps) {
           BankLinked: e.bankLinked ? 'Yes' : 'No',
           JoinedDate: new Date(e.joinedDate).toLocaleDateString('en-IN'),
         }))}
+      />
+
+      <ImportModal
+        show={showImport}
+        onClose={() => setShowImport(false)}
+        title="Electricians"
+        onImport={async (records) => {
+          const res = await electricianApi.importMany(records);
+          await loadData(currentPage);
+          return res;
+        }}
       />
 
       {/* Summary Cards */}
