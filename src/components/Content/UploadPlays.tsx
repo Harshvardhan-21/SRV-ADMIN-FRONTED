@@ -4,7 +4,7 @@ import { Play, Plus, Trash2, Edit3, Save, X, ToggleLeft, ToggleRight, Users, Mes
 import { useThemePalette } from '@/lib/theme';
 import { getToken } from '@/lib/api';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -135,7 +135,7 @@ function VideoUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void;
     setProgress(0);
 
     try {
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
       const token = typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
 
       // Use XMLHttpRequest for progress tracking

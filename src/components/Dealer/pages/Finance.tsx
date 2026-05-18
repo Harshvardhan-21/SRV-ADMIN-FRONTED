@@ -123,7 +123,7 @@ function WithdrawalTab() {
   const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
-    redemptionApi.getAll({ limit: '500' })
+    redemptionApi.getAll({ role: 'dealer', limit: '500' })
       .then(res => setRows(Array.isArray(res) ? res : (res as any).data ?? []))
       .catch(console.error)
       .finally(() => setLoading(false));

@@ -106,71 +106,33 @@ export default function AdminSettings() {
         
         // Try to load custom permissions from database
         try {
-          const token = localStorage.getItem('srv_token'); // Correct token key
-          if (!token) {
-            console.log('No token found, skipping permission load for', a.name);
-            return {
-              id: a.id,
-              name: a.name,
-              email: a.email,
-              phone: a.phone ?? '',
-              role: a.role ?? 'staff',
-              status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
-              createdAt: a.createdAt ?? a.created_at ?? '',
-              lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
-              permissions: ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
-            };
-          }
-          
-          const permsRes = await fetch(`http://localhost:3001/api/v1/admins/${a.id}/permissions`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (permsRes.status === 401) {
-            console.warn('Token expired or unauthorized. Please logout and login again.');
-            // Don't throw error, just use default permissions
-            return {
-              id: a.id,
-              name: a.name,
-              email: a.email,
-              phone: a.phone ?? '',
-              role: a.role ?? 'staff',
-              status: a.isActive === false ? 'inactive' : (a.status ?? 'active'),
-              createdAt: a.createdAt ?? a.created_at ?? '',
-              lastLogin: a.lastLoginAt ?? a.lastLogin ?? a.last_login ?? '—',
-              permissions: ROLE_DEFAULT_PERMISSIONS[a.role as AdminRole] ?? [],
-            };
-          }
-          
-          if (permsRes.ok) {
-            const permsData = await permsRes.json();
-            console.log(`Loaded permissions for ${a.name}:`, permsData);
-            // Convert module permissions to permission strings
-            if (Array.isArray(permsData)) {
-              customPermissions = permsData.flatMap((p: any) => {
-                const perms: string[] = [];
-                const moduleMap: Record<string, string> = {
-                  'dashboard': 'View Dashboard',
-                  'electricians': 'Manage Electricians',
-                  'dealers': 'Manage Dealers',
-                  'products': 'Manage Products',
-                  'qr_codes': 'Manage QR Codes',
-                  'gifts': 'Manage Gifts',
-                  'reports': 'View Reports',
-                  'settings': 'Manage Settings',
-                  'notifications': 'Send Notifications',
-                  'banners': 'Manage Banners',
-                  'finance': 'Manage Finance',
-                  'commissions': 'Manage Commissions',
-                };
-                const permName = moduleMap[p.module];
-                if (permName && (p.canView || p.canCreate || p.canEdit || p.canDelete)) {
-                  perms.push(permName);
-                }
-                return perms;
-              });
-              console.log(`Converted to permission strings for ${a.name}:`, customPermissions);
-            }
+          const permsResponseData = await adminApi.getPermissions(a.id);
+          console.log(`Loaded permissions for ${a.name}:`, permsResponseData);
+          // Convert module permissions to permission strings
+          if (Array.isArray(permsResponseData)) {
+            customPermissions = permsResponseData.flatMap((p: any) => {
+              const perms: string[] = [];
+              const moduleMap: Record<string, string> = {
+                'dashboard': 'View Dashboard',
+                'electricians': 'Manage Electricians',
+                'dealers': 'Manage Dealers',
+                'products': 'Manage Products',
+                'qr_codes': 'Manage QR Codes',
+                'gifts': 'Manage Gifts',
+                'reports': 'View Reports',
+                'settings': 'Manage Settings',
+                'notifications': 'Send Notifications',
+                'banners': 'Manage Banners',
+                'finance': 'Manage Finance',
+                'commissions': 'Manage Commissions',
+              };
+              const permName = moduleMap[p.module];
+              if (permName && (p.canView || p.canCreate || p.canEdit || p.canDelete)) {
+                perms.push(permName);
+              }
+              return perms;
+            });
+            console.log(`Converted to permission strings for ${a.name}:`, customPermissions);
           }
         } catch (err) {
           console.log('Could not load permissions for', a.name, '- using defaults');
@@ -647,25 +609,7 @@ export default function AdminSettings() {
                             // Save for all users with this role
                             const results = await Promise.all(roleAdmins.map(async admin => {
                               console.log(`Saving permissions for admin: ${admin.name} (${admin.id})`);
-                              const response = await fetch(`http://localhost:3001/api/v1/admins/${admin.id}/permissions`, {
-                                method: 'PUT',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${localStorage.getItem('srv_token')}` // Correct token key
-                                },
-                                body: JSON.stringify({ permissions: modulePermissions })
-                              });
-                              
-                              if (!response.ok) {
-                                if (response.status === 401) {
-                                  throw new Error('Session expired. Please logout and login again as Super Admin.');
-                                }
-                                const errorText = await response.text();
-                                console.error(`Failed to save permissions for ${admin.name}:`, response.status, errorText);
-                                throw new Error(`Failed to save permissions for ${admin.name}: ${response.status}`);
-                              }
-                              
-                              const result = await response.json();
+                              const result = await adminApi.updatePermissions(admin.id, { permissions: modulePermissions });
                               console.log(`Successfully saved permissions for ${admin.name}:`, result);
                               return result;
                             }));

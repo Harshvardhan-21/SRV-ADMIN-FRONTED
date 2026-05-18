@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Wallet, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { walletApi } from '@/lib/api';
+import { walletApi, counterboyApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -23,16 +23,13 @@ export default function CounterBoyWallet() {
         const enrichedTxns = await Promise.all(
           txns.map(async (t: any) => {
             try {
-              const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${t.userId}`);
-              if (userRes.ok) {
-                const userData = await userRes.json();
-                return {
-                  ...t,
-                  userName: userData.name || userData.fullName || 'N/A',
-                  userPhone: userData.phone || userData.mobile || 'N/A',
-                  userCode: userData.counterboyCode || userData.code || 'N/A'
-                };
-              }
+              const userData = await counterboyApi.getOne(t.userId);
+              return {
+                ...t,
+                userName: userData.name || userData.fullName || 'N/A',
+                userPhone: userData.phone || userData.mobile || 'N/A',
+                userCode: userData.counterboyCode || userData.code || 'N/A'
+              };
             } catch (err) {
               console.error('Error fetching user:', err);
             }

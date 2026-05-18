@@ -76,10 +76,15 @@ export default function DealerOffers() {
       return;
     }
     try {
+      const payload = {
+        ...form,
+        validFrom: form.validFrom || null,
+        validTo: form.validTo || null,
+      };
       if (editingOffer) {
-        await offerApi.update(editingOffer.id, form);
+        await offerApi.update(editingOffer.id, payload);
       } else {
-        await offerApi.create(form);
+        await offerApi.create(payload);
       }
       await loadOffers();
       setShowForm(false);

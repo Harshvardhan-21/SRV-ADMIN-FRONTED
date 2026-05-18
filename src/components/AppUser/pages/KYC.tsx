@@ -38,16 +38,20 @@ export default function UserKYC() {
 
   const saveEdit = async () => {
     if (!editing) return;
-    await appUserApi.update(editing.id, {
-      aadharNumber: editing.aadharNumber ?? null,
-      panNumber: editing.panNumber ?? null,
-      aadharDocument: editing.aadharDocument ?? null,
-      panDocument: editing.panDocument ?? null,
-      kycStatus: editing.kycStatus,
-      kycRejectionReason: editing.kycRejectionReason ?? null,
-    });
-    setRows(prev => prev.map(row => row.id === editing.id ? editing : row));
-    setEditing(null);
+    try {
+      await appUserApi.update(editing.id, {
+        aadharNumber: editing.aadharNumber ?? null,
+        panNumber: editing.panNumber ?? null,
+        aadharDocument: editing.aadharDocument ?? null,
+        panDocument: editing.panDocument ?? null,
+        kycStatus: editing.kycStatus,
+        kycRejectionReason: editing.kycRejectionReason ?? null,
+      });
+      setRows(prev => prev.map(row => row.id === editing.id ? editing : row));
+      setEditing(null);
+    } catch (err) {
+      console.error('Failed to save KYC:', err);
+    }
   };
 
   const updateStatus = (row: AppUser, status: string) => {
@@ -57,8 +61,12 @@ export default function UserKYC() {
       message: `${status === 'verified' ? 'Verify' : 'Reject'} KYC for ${row.name}?`,
       type: status === 'verified' ? 'success' : 'danger',
       onConfirm: async () => {
-        await appUserApi.update(row.id, { kycStatus: status });
-        setRows(prev => prev.map(item => item.id === row.id ? { ...item, kycStatus: status } : item));
+        try {
+          await appUserApi.update(row.id, { kycStatus: status });
+          setRows(prev => prev.map(item => item.id === row.id ? { ...item, kycStatus: status } : item));
+        } catch (err) {
+          console.error('Failed to update KYC status:', err);
+        }
         setConfirmState(prev => ({ ...prev, show: false }));
       },
     });

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Trophy, TrendingUp, Calendar } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -18,52 +18,42 @@ const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string 
 
 const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
 
-// Simulate date-based filtering by multiplying points with a range factor
-function getFilteredData(electricians: any[], range: Range, from: string, to: string, sortBy: SortBy) {
-  const factors: Record<Range, number> = {
-    weekly: 0.08,
-    monthly: 0.3,
-    quarterly: 0.6,
-    yearly: 1,
-    custom: 0.5,
-  };
-  const factor = range === 'custom'
-    ? Math.min(1, Math.max(0.05, (new Date(to).getTime() - new Date(from).getTime()) / (365 * 24 * 60 * 60 * 1000)))
-    : factors[range];
-
-  return [...electricians]
-    .filter(e => e.status === 'active')
-    .map(e => ({
-      ...e,
-      periodPoints: Math.round(e.totalPoints * factor),
-      periodScans: Math.round(e.totalScans * factor),
-      periodRedemptions: Math.round(e.totalRedemptions * factor),
-    }))
-    .sort((a, b) => {
-      if (sortBy === 'points') return b.periodPoints - a.periodPoints;
-      if (sortBy === 'scans') return b.periodScans - a.periodScans;
-      return b.periodRedemptions - a.periodRedemptions;
-    })
-    .slice(0, 10);
-}
-
 export default function TopElectricians() {
   const C = useThemePalette();
   const [range, setRange] = useState<Range>('monthly');
   const [sortBy, setSortBy] = useState<SortBy>('points');
   const [fromDate, setFromDate] = useState('2024-01-01');
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
-  const [allElectricians, setAllElectricians] = useState<any[]>([]);
+  const [topList, setTopList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
 
-  useEffect(() => {
-    electricianApi.getAll({ limit: '500' }).then(res => {
-      setAllElectricians(Array.isArray(res) ? res : (res as any).data ?? []);
-    }).catch(console.error).finally(() => setLoading(false));
-  }, []);
+  const getDateRange = useCallback(() => {
+    const now = new Date();
+    const end = now.toISOString().split('T')[0];
+    let start: string;
+    if (range === 'custom') {
+      start = fromDate;
+    } else {
+      const d = new Date(now);
+      if (range === 'weekly') d.setDate(d.getDate() - 7);
+      else if (range === 'monthly') d.setMonth(d.getMonth() - 1);
+      else if (range === 'quarterly') d.setMonth(d.getMonth() - 3);
+      else if (range === 'yearly') d.setFullYear(d.getFullYear() - 1);
+      start = d.toISOString().split('T')[0];
+    }
+    return { from: start, to: range === 'custom' ? toDate : end };
+  }, [range, fromDate, toDate]);
 
-  const topList = useMemo(() => getFilteredData(allElectricians, range, fromDate, toDate, sortBy), [allElectricians, range, fromDate, toDate, sortBy]);
+  useEffect(() => {
+    const { from, to } = getDateRange();
+    setLoading(true);
+    electricianApi.getTop({ from, to, sortBy, limit: '10' })
+      .then(res => setTopList(Array.isArray(res) ? res : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [range, sortBy, fromDate, toDate, getDateRange]);
+
   const maxVal = topList[0]
     ? sortBy === 'points' ? topList[0].periodPoints
     : sortBy === 'scans' ? topList[0].periodScans

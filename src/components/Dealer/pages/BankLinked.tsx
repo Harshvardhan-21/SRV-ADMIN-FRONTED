@@ -194,6 +194,7 @@ export default function DealerBankLinked() {
             bankName: (d as any).bankName ?? null,
             accountHolderName: (d as any).accountHolderName ?? null,
             gstNumber: d.gstNumber ?? null,
+            electricianCount: d.electricianCount,
           };
           await dealerApi.update(d.id, payload);
           setData(prev => prev.map(x => x.id === d.id ? d : x));

@@ -1,7 +1,7 @@
 // Central API client for SRV Admin Backend
 // Backend runs at http://localhost:3001/api/v1
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const getToken = (): string | null =>
@@ -137,6 +137,9 @@ export const adminApi = {
   },
   update: (id: string, body: object) => request<any>(`/admins/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/admins/${id}`, { method: 'DELETE' }),
+  getPermissions: (id: string) => request<any>(`/admins/${id}/permissions`),
+  updatePermissions: (id: string, body: object) =>
+    request<any>(`/admins/${id}/permissions`, { method: 'PUT', body: JSON.stringify(body) }),
 };
 
 // ─── Electricians ─────────────────────────────────────────────────────────────
@@ -147,6 +150,10 @@ export const electricianApi = {
   },
   getTierCounts: () =>
     request<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>('/electricians/tier-counts'),
+  getTop: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any[]>(`/electricians/top${q}`);
+  },
   getDistinctStates: () =>
     request<{ states: string[] }>('/electricians/distinct-states'),
   getDistinctCategories: () =>
@@ -171,6 +178,10 @@ export const dealerApi = {
   },
   getStats: () =>
     request<{ total: number; active: number; pending: number; inactive: number }>('/dealers/stats'),
+  getTop: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<any[]>(`/dealers/top${q}`);
+  },
   getDistinctStates: () =>
     request<{ states: string[] }>('/dealers/distinct-states'),
   getOne: (id: string) => request<any>(`/dealers/${id}`),
@@ -336,18 +347,6 @@ export const giftApi = {
   },
   updateOrderStatus: (id: string, status: string) =>
     request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-};
-
-// ─── Orders ────────────────────────────────────────────────────────────────────
-export const orderApi = {
-  getAll: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<{ data: any[]; total: number }>(`/orders${q}`);
-  },
-  getOne: (id: string) => request<any>(`/orders/${id}`),
-  create: (body: object) => request<any>('/orders', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: object) => request<any>(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: (id: string) => request<void>(`/orders/${id}`, { method: 'DELETE' }),
 };
 
 // ─── Finance ──────────────────────────────────────────────────────────────────

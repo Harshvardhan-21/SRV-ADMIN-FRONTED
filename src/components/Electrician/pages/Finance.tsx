@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { CreditCard, Eye, Banknote, DollarSign, TrendingUp, ArrowDownLeft, ArrowUpRight, Wallet } from 'lucide-react';
 import { walletApi, redemptionApi } from '@/lib/api';
@@ -99,7 +99,7 @@ function WithdrawalTab() {
   const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
-    redemptionApi.getAll({ limit: '500' })
+    redemptionApi.getAll({ role: 'electrician', limit: '500' })
       .then(res => setRows(Array.isArray(res) ? res : (res as any).data ?? []))
       .catch(console.error).finally(() => setLoading(false));
   }, []);

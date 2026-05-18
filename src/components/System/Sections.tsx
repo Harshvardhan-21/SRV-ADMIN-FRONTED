@@ -1161,7 +1161,17 @@ export function Settings() {
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ appName: 'SRV Electricals', tagline: 'Power Your Rewards', supportPhone: '+91 88376 84004', supportEmail: 'support@srvelectricals.com', whatsapp: '918837684004', maxPointsPerDay: 500, cashbackRate: 5, minRedemptionPoints: 500 });
   const f = (k: keyof typeof form, v: unknown) => setForm(p => ({ ...p, [k]: v }));
-  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 3000); };
+  const handleSave = async () => {
+    try {
+      for (const [key, value] of Object.entries(form)) {
+        await settingsApi.update(key, String(value));
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    }
+  };
 
   const sections = [
     { title: '🏢 App Information', fields: [

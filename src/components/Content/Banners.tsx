@@ -20,7 +20,7 @@ interface Banner {
 
 const EMPTY_FORM = { title: '', imageUrl: '', bgColor: '#FFFFFF', resizeMode: 'contain' as 'cover' | 'contain', isActive: true, displayOrder: 1, targetRole: ['All'] as ('Electrician' | 'Dealer' | 'Customer' | 'CounterBoy' | 'All')[] };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/api\/v1\/?$/, '');
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
 
 function normalizeBannerImageUrl(value: string | null | undefined): string {
   const raw = String(value ?? '').trim();

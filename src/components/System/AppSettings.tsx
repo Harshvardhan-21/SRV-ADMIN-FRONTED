@@ -70,7 +70,7 @@ function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) 
     setSuccess('');
 
     try {
-      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
       const token = typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
       const formData = new FormData();
       formData.append('file', file);

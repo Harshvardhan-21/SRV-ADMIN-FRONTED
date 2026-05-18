@@ -1,14 +1,12 @@
 'use client';
-import { useState, useMemo, useEffect } from 'react';
-import { Trophy, TrendingUp, Calendar, Store, Download } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Trophy, TrendingUp, Calendar, Store } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { MemberTier } from '@/lib/types';
-import { exportRowsToExcel } from '@/lib/excel';
 import ExportModal from '@/components/Shared/ExportModal';
 
 type Range = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-type SortBy = 'electricians';
 
 const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string }> = {
   Silver:   { color: '#475569', bg: '#F1F5F9', icon: '🥈' },
@@ -21,37 +19,38 @@ const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
 
 export default function TopDealers() {
   const C = useThemePalette();
-  const [dealers, setDealers] = useState<any[]>([]);
+  const [topList, setTopList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>('monthly');
-  const [sortBy] = useState<SortBy>('electricians');
   const [fromDate, setFromDate] = useState('2024-01-01');
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
   const [showExport, setShowExport] = useState(false);
 
+  const getDateRange = useCallback(() => {
+    const now = new Date();
+    const end = now.toISOString().split('T')[0];
+    let start: string;
+    if (range === 'custom') {
+      start = fromDate;
+    } else {
+      const d = new Date(now);
+      if (range === 'weekly') d.setDate(d.getDate() - 7);
+      else if (range === 'monthly') d.setMonth(d.getMonth() - 1);
+      else if (range === 'quarterly') d.setMonth(d.getMonth() - 3);
+      else if (range === 'yearly') d.setFullYear(d.getFullYear() - 1);
+      start = d.toISOString().split('T')[0];
+    }
+    return { from: start, to: range === 'custom' ? toDate : end };
+  }, [range, fromDate, toDate]);
+
   useEffect(() => {
-    dealerApi.getAll({ limit: '500' }).then(res => {
-      setDealers(Array.isArray(res) ? res : (res as any).data ?? []);
-    }).catch(console.error).finally(() => setLoading(false));
-  }, []);
-
-  const topList = useMemo(() => {
-    const factors: Record<Range, number> = {
-      weekly: 0.08, monthly: 0.3, quarterly: 0.6, yearly: 1, custom: 0.5,
-    };
-    const factor = range === 'custom'
-      ? Math.min(1, Math.max(0.05, (new Date(toDate).getTime() - new Date(fromDate).getTime()) / (365 * 24 * 60 * 60 * 1000)))
-      : factors[range];
-
-    return [...dealers]
-      .filter((d: any) => d.status === 'active')
-      .map((d: any) => ({
-        ...d,
-        periodElectricians: Math.round((d.electricianCount ?? 0) * factor),
-      }))
-      .sort((a, b) => b.periodElectricians - a.periodElectricians)
-      .slice(0, 10);
-  }, [dealers, range, fromDate, toDate]);
+    const { from, to } = getDateRange();
+    setLoading(true);
+    dealerApi.getTop({ from, to, limit: '10' })
+      .then(res => setTopList(Array.isArray(res) ? res : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [range, fromDate, toDate, getDateRange]);
 
   const maxVal = topList[0]
     ? topList[0].periodElectricians
