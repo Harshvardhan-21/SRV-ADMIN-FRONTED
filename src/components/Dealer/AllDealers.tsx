@@ -152,7 +152,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
   const isAdd = !dealer;
   const [form, setForm] = useState<Partial<Dealer>>(dealer ?? {
     name: '', profileImage: '', phone: '', email: '', dealerCode: '', town: '', district: '', state: '', address: '', pincode: '',
-    tier: 'Silver', status: 'active', electricianCount: 0, gstNumber: '', bankLinked: false, upiId: '', monthlyTarget: 0, achievedTarget: 0, contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
+    tier: 'Silver', status: 'active', gstNumber: '', bankLinked: false, upiId: '', monthlyTarget: 0, achievedTarget: 0, contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
     salesManName: '', townCode: '', rtoCode: '', listCode: '', electricianList: '',
   });
   const f = (k: keyof Dealer, v: unknown) => setForm(p => ({ ...p, [k]: v }));
@@ -270,17 +270,10 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
               </select>
             </div>
             <div><label style={labelStyle}>Monthly Target (₹)</label><input style={inputStyle} type="number" value={form.monthlyTarget ?? ''} onChange={e => f('monthlyTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
-            <div><label style={labelStyle}>No. of Electricians</label><input style={inputStyle} type="number" min={0} value={form.electricianCount ?? ''} onChange={e => f('electricianCount', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
             {!isAdd && (
               <div><label style={labelStyle}>Achieved Target (₹)</label><input style={inputStyle} type="number" value={form.achievedTarget ?? ''} onChange={e => f('achievedTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
             )}
 
-            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>📋 Import Fields</div></div>
-            <div><label style={labelStyle}>Sales Man Name</label><input style={inputStyle} value={form.salesManName ?? ''} onChange={e => f('salesManName', e.target.value)} placeholder="Sales man name" /></div>
-            <div><label style={labelStyle}>Town Code</label><input style={inputStyle} value={form.townCode ?? ''} onChange={e => f('townCode', e.target.value)} placeholder="Town code" /></div>
-            <div><label style={labelStyle}>RTO Code</label><input style={inputStyle} value={form.rtoCode ?? ''} onChange={e => f('rtoCode', e.target.value)} placeholder="RTO code" /></div>
-            <div><label style={labelStyle}>List Code</label><input style={inputStyle} value={form.listCode ?? ''} onChange={e => f('listCode', e.target.value)} placeholder="List code" /></div>
-            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Electrician List</label><textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 50 } as React.CSSProperties} value={form.electricianList ?? ''} onChange={e => f('electricianList', e.target.value)} placeholder="Electrician list (comma separated)" /></div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
@@ -454,7 +447,6 @@ export default function Dealers({ role }: DealersProps) {
       profileImage: form.profileImage && form.profileImage.trim() !== '' ? form.profileImage : undefined,
       bankLinked: form.bankLinked,
       monthlyTarget: typeof form.monthlyTarget === 'number' ? form.monthlyTarget : undefined,
-      electricianCount: typeof form.electricianCount === 'number' ? form.electricianCount : undefined,
       salesManName: form.salesManName && form.salesManName.trim() !== '' ? form.salesManName : undefined,
       townCode: form.townCode && form.townCode.trim() !== '' ? form.townCode : undefined,
       rtoCode: form.rtoCode && form.rtoCode.trim() !== '' ? form.rtoCode : undefined,

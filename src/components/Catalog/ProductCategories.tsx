@@ -153,8 +153,6 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
     try {
       const payload = {
         label: form.name,
-        slug: form.slug,
-        description: form.description,
         imageUrl: form.image,
         sortOrder: form.sortOrder,
         isActive: form.isActive,
