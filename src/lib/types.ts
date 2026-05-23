@@ -48,6 +48,13 @@ export interface Electrician {
   subCategory: ElectricianSubCategory;
   bankName?: string;
   accountHolderName?: string;
+  kycStatus?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  aadharFrontImage?: string;
+  panDocument?: string;
+  gstDocument?: string;
+  kycRejectionReason?: string;
 }
 
 export interface Dealer {
@@ -78,6 +85,13 @@ export interface Dealer {
   rtoCode?: string;
   listCode?: string;
   electricianList?: string;
+  kycStatus?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  aadharFrontImage?: string;
+  panDocument?: string;
+  gstDocument?: string;
+  kycRejectionReason?: string;
 }
 
 export interface Product {
@@ -208,8 +222,9 @@ export interface AppUser {
   accountHolderName?: string;
   aadharNumber?: string;
   panNumber?: string;
-  aadharDocument?: string;
+  aadharFrontImage?: string;
   panDocument?: string;
+  gstDocument?: string;
   kycRejectionReason?: string;
   joinedDate: string;
 }
@@ -244,8 +259,9 @@ export interface CounterBoy {
   recentActivity?: string;
   aadharNumber?: string;
   panNumber?: string;
-  aadharDocument?: string;
+  aadharFrontImage?: string;
   panDocument?: string;
+  gstDocument?: string;
   kycRejectionReason?: string;
   status: UserStatus;
   kycStatus: string;

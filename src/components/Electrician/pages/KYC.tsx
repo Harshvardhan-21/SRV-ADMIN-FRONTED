@@ -13,8 +13,9 @@ interface ElectricianKYCItem {
   kycStatus: 'not_submitted' | 'pending' | 'verified' | 'rejected';
   aadharNumber?: string;
   panNumber?: string;
-  aadharDocument?: string;
+  aadharFrontImage?: string;
   panDocument?: string;
+  gstDocument?: string;
   kycRejectionReason?: string;
   joinedDate: string;
 }
@@ -62,8 +63,9 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; on
   const [form, setForm] = useState<Partial<ElectricianKYCItem>>({
     aadharNumber: doc.aadharNumber ?? '',
     panNumber: doc.panNumber ?? '',
-    aadharDocument: doc.aadharDocument ?? '',
+    aadharFrontImage: doc.aadharFrontImage ?? '',
     panDocument: doc.panDocument ?? '',
+    gstDocument: doc.gstDocument ?? '',
     kycStatus: doc.kycStatus,
     kycRejectionReason: doc.kycRejectionReason ?? '',
   });
@@ -92,9 +94,10 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; on
               <input style={inputStyle} value={form.panNumber ?? ''} maxLength={10} onChange={e => f('panNumber', e.target.value.toUpperCase())} placeholder="ABCDE1234F" />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <ImageUploadBox label="Aadhar Document" value={form.aadharDocument} onChange={v => f('aadharDocument', v)} C={C} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            <ImageUploadBox label="Aadhar Card" value={form.aadharFrontImage} onChange={v => f('aadharFrontImage', v)} C={C} />
             <ImageUploadBox label="PAN Document" value={form.panDocument} onChange={v => f('panDocument', v)} C={C} />
+            <ImageUploadBox label="GST Document" value={form.gstDocument} onChange={v => f('gstDocument', v)} C={C} />
           </div>
           <div>
             <label style={labelStyle}>KYC Status</label>
@@ -142,8 +145,9 @@ export default function ElectricianKYC() {
         kycStatus: e.kycStatus ?? 'not_submitted',
         aadharNumber: e.aadharNumber,
         panNumber: e.panNumber,
-        aadharDocument: e.aadharDocument,
+        aadharFrontImage: e.aadharFrontImage,
         panDocument: e.panDocument,
+        gstDocument: e.gstDocument,
         kycRejectionReason: e.kycRejectionReason,
         joinedDate: e.joinedDate,
       })));
@@ -205,13 +209,15 @@ export default function ElectricianKYC() {
           await electricianApi.update(doc.id, {
             kycStatus: 'not_submitted',
             aadharNumber: null, panNumber: null,
-            aadharDocument: null, panDocument: null,
+            aadharFrontImage: null, aadharBackImage: null,
+            panDocument: null, gstDocument: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
             ...d, kycStatus: 'not_submitted',
             aadharNumber: undefined, panNumber: undefined,
-            aadharDocument: undefined, panDocument: undefined,
+            aadharFrontImage: undefined, aadharBackImage: undefined,
+            panDocument: undefined, gstDocument: undefined,
             kycRejectionReason: undefined,
           } : d));
         } catch (err) { console.error(err); }
@@ -260,22 +266,23 @@ export default function ElectricianKYC() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Electrician', 'Code', 'Aadhar Doc', 'PAN Doc', 'KYC Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '14px 16px', textAlign: h === 'Aadhar Doc' || h === 'PAN Doc' ? 'center' : 'left', fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
+                {['Electrician', 'Code', 'Aadhar', 'PAN Doc', 'GST Doc', 'KYC Status', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '14px 16px', textAlign: ['Aadhar','PAN Doc','GST Doc'].includes(h) ? 'center' : 'left', fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No electricians found</td></tr>
+                <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No electricians found</td></tr>
               ) : filtered.map(doc => {
                 const status = statusConfig[doc.kycStatus] ?? statusConfig['not_submitted'];
                 return (
                   <tr key={doc.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     <td style={{ padding: '13px 16px' }}><div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{doc.name}</div></td>
                     <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{doc.electricianCode}</td>
-                    <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.aadharDocument} C={C} /></td>
+                    <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.aadharFrontImage} C={C} /></td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.panDocument} C={C} /></td>
+                    <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.gstDocument} C={C} /></td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span></td>
                     <td style={{ padding: '13px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
@@ -309,8 +316,8 @@ export default function ElectricianKYC() {
               {[['Code', selectedDoc.electricianCode], ['KYC Status', selectedDoc.kycStatus], ['Aadhar Number', selectedDoc.aadharNumber || '—'], ['PAN Number', selectedDoc.panNumber || '—'], ['Rejection Reason', selectedDoc.kycRejectionReason || '—']].map(([k, v]) => (
                 <div key={k} style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>{k}:</strong> {v}</div>
               ))}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
-                {[['Aadhar', selectedDoc.aadharDocument], ['PAN', selectedDoc.panDocument]].map(([label, src]) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 4 }}>
+                {[['Aadhar', selectedDoc.aadharFrontImage], ['PAN', selectedDoc.panDocument], ['GST', selectedDoc.gstDocument]].map(([label, src]) => (
                   <div key={label}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 8, textTransform: 'uppercase' }}>{label}</div>
                     {src ? <img src={src} alt={label} style={{ width: '100%', borderRadius: 10, border: `1px solid ${C.border}` }} /> : <div style={{ height: 80, background: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 12 }}>No image</div>}
