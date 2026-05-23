@@ -107,9 +107,11 @@ async function request<T>(
     throw new Error(`[${res.status}] ${message || 'Request failed'}`);
   }
 
-  // 204 No Content
+  // 204 No Content — or any response with empty body
   if (res.status === 204) return undefined as T;
-  return res.json();
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -462,6 +464,33 @@ export const counterboyApi = {
     request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
       '/counterboys/import', { method: 'POST', body: JSON.stringify({ records }) }
     ),
+};
+
+// ─── App Icons ─────────────────────────────────────────────────────────────────
+export const appIconApi = {
+  getAll: () => request<any[]>('/app-icons'),
+  getActive: () => request<any>('/app-icons/active'),
+  getOne: (id: string) => request<any>(`/app-icons/${id}`),
+  create: (body: object) => request<any>('/app-icons', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: object) => request<any>(`/app-icons/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  setActive: (id: string) => request<any>(`/app-icons/${id}/set-active`, { method: 'PATCH' }),
+  delete: (id: string) => request<void>(`/app-icons/${id}`, { method: 'DELETE' }),
+  uploadIcon: async (file: File): Promise<string> => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE_URL}/app-icons/upload-image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || 'Icon upload failed');
+    }
+    const data = await res.json();
+    return data.url as string;
+  },
 };
 
 export const referralApi = {

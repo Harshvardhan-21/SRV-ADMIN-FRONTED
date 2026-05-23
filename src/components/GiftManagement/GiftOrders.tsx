@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search } from 'lucide-react';
+import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi, redemptionApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -10,7 +10,7 @@ type OrderStatus = 'pending' | 'approved' | 'shipped' | 'delivered' | 'rejected'
 
 interface GiftOrder {
   id: string;
-  type: 'electrician' | 'dealer';
+  type: 'electrician' | 'dealer' | 'customer' | 'counterboy';
   userName: string;
   userCode: string;
   dealerName: string;
@@ -59,8 +59,8 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
               { label: 'Order ID', value: `#${order.id}` },
-              { label: 'Type', value: order.type === 'electrician' ? '⚡ Electrician' : 'Dealer' },
-              { label: order.type === 'electrician' ? 'Electrician' : 'Dealer', value: order.userName },
+              { label: 'Type', value: order.type === 'electrician' ? '⚡ Electrician' : order.type === 'dealer' ? '🏬 Dealer' : order.type === 'customer' ? '👤 Customer' : '🧾 Counterboy' },
+              { label: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy', value: order.userName },
               { label: 'Code', value: order.userCode },
               { label: 'Dealer', value: order.dealerName },
               { label: 'Ordered On', value: new Date(order.orderedAt).toLocaleDateString('en-IN') },
@@ -84,7 +84,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   const canEdit = isSuperAdmin || isAdmin;
   const [orders, setOrders] = useState<GiftOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'electrician' | 'dealer'>('electrician');
+  const [tab, setTab] = useState<'electrician' | 'dealer' | 'customer' | 'counterboy'>('electrician');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | OrderStatus>('all');
   const [selectedOrder, setSelectedOrder] = useState<GiftOrder | null>(null);
@@ -141,7 +141,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.action === 'approve' ? 'Approve Order' : 'Reject Order'} message={`Are you sure you want to ${confirmState.action} this gift order?`} onConfirm={confirmAction} onCancel={() => setConfirmState({ show: false, id: '', action: 'approve' })} type={confirmState.action === 'approve' ? 'success' : 'danger'} />
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={tab === 'electrician' ? 'Electrician Gift Orders' : 'Dealer Gift Orders'} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status }))} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
@@ -166,7 +166,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       {/* Tabs + Export */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', background: C.card, borderRadius: 12, padding: 4, border: `1px solid ${C.border}`, gap: 4 }}>
-          {[{ id: 'electrician', label: 'Electrician Orders', Icon: Zap }, { id: 'dealer', label: 'Dealer Orders', Icon: Store }].map(t => (
+          {[{ id: 'electrician', label: 'Electrician Orders', Icon: Zap }, { id: 'dealer', label: 'Dealer Orders', Icon: Store }, { id: 'customer', label: 'Customer Orders', Icon: User }, { id: 'counterboy', label: 'Counterboy Orders', Icon: Package }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               style={{ padding: '9px 20px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7, background: tab === t.id ? '#7C3AED' : 'transparent', color: tab === t.id ? 'white' : C.muted, transition: 'all 0.2s' }}>
               <t.Icon size={15} /> {t.label}
@@ -241,9 +241,9 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{order.id}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ background: order.type === 'electrician' ? '#FFF0F0' : '#EFF6FF', color: order.type === 'electrician' ? '#C2410C' : '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
-                      {order.type === 'electrician' ? <Zap size={11} /> : <Store size={11} />}
-                      {order.type === 'electrician' ? 'Electrician' : 'Dealer'}
+                    <span style={{ background: order.type === 'electrician' ? '#FFF0F0' : order.type === 'dealer' ? '#EFF6FF' : order.type === 'customer' ? '#F0FDF4' : '#FDF4FF', color: order.type === 'electrician' ? '#C2410C' : order.type === 'dealer' ? '#1D4ED8' : order.type === 'customer' ? '#15803D' : '#7C3AED', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
+                      {order.type === 'electrician' ? <Zap size={11} /> : order.type === 'dealer' ? <Store size={11} /> : order.type === 'customer' ? <User size={11} /> : <Package size={11} />}
+                      {order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy'}
                     </span>
                   </td>
                   <td style={{ padding: '14px 16px' }}>

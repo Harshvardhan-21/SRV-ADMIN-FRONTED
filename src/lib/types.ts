@@ -229,6 +229,17 @@ export interface AppUser {
   joinedDate: string;
 }
 
+export interface AppIcon {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  isActive: boolean;
+  displayOrder: number;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CounterBoy {
   id: string;
   name: string;

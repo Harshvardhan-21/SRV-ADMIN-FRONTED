@@ -7,7 +7,7 @@ import {
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageSquare, FileText, Megaphone,
-  UserCheck, ClipboardList, Shield, Smartphone, Play,
+  UserCheck, ClipboardList, Shield, Smartphone, Play, AppWindow,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -85,6 +85,7 @@ const NAV_GROUPS = [
       { id: 'admin-settings', label: 'Admin Settings', Icon: Shield },
       { id: 'app-settings', label: 'App Settings', Icon: Smartphone },
       { id: 'app-page-controls', label: 'App Page Controls', Icon: Smartphone },
+      { id: 'app-icons', label: 'App Icons', Icon: AppWindow },
     ]
   },
 ];

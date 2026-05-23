@@ -32,6 +32,28 @@ html[data-theme="dark"] body {
   background: #94A3B8;
 }
 
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+html[data-theme="dark"] ::selection {
+  background: rgba(59, 130, 246, 0.25);
+  color: #F8FAFC;
+}
+
 input, select, textarea {
   font-family: inherit;
 }

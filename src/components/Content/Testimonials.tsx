@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Star, Users, Zap, Store } from 'lucide-react';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Star, Users, Zap, Store, User, Package } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { testimonialApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
-type UserCategory = 'all' | 'electrician' | 'dealer';
+type UserCategory = 'all' | 'electrician' | 'dealer' | 'customer' | 'counterboy';
 
 interface Testimonial {
   id: string;
@@ -35,9 +35,11 @@ const EMPTY_FORM = {
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 const TABS: { id: UserCategory; label: string; Icon: any; color: string; bg: string }[] = [
-  { id: 'all', label: 'All Users', Icon: Users, color: '#7C3AED', bg: '#F5F3FF' },
-  { id: 'electrician', label: 'Electricians', Icon: Zap, color: '#1D4ED8', bg: '#EFF6FF' },
-  { id: 'dealer', label: 'Dealers', Icon: Store, color: '#065F46', bg: '#D1FAE5' },
+  { id: 'all',        label: 'All Users',   Icon: Users,    color: '#7C3AED', bg: '#F5F3FF' },
+  { id: 'electrician',label: 'Electricians',Icon: Zap,      color: '#1D4ED8', bg: '#EFF6FF' },
+  { id: 'dealer',     label: 'Dealers',     Icon: Store,    color: '#065F46', bg: '#D1FAE5' },
+  { id: 'customer',   label: 'Customers',   Icon: User,     color: '#C2410C', bg: '#FFF7ED' },
+  { id: 'counterboy', label: 'Counterboys', Icon: Package,  color: '#0F766E', bg: '#F0FDFA' },
 ];
 
 const tierColors: Record<string, { bg: string; color: string }> = {
@@ -105,6 +107,8 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
     all: testimonials.length,
     electrician: testimonials.filter(t => t.userCategory === 'electrician').length,
     dealer: testimonials.filter(t => t.userCategory === 'dealer').length,
+    customer: testimonials.filter(t => t.userCategory === 'customer').length,
+    counterboy: testimonials.filter(t => t.userCategory === 'counterboy').length,
     active: testimonials.filter(t => t.isActive).length,
   }), [testimonials]);
 
@@ -178,6 +182,8 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
             { label: 'Active', value: stats.active, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
             { label: 'Electricians', value: stats.electrician, bg: 'rgba(59,130,246,0.2)', color: '#93C5FD' },
             { label: 'Dealers', value: stats.dealer, bg: 'rgba(16,185,129,0.2)', color: '#6EE7B7' },
+            { label: 'Customers', value: stats.customer, bg: 'rgba(194,65,12,0.2)', color: '#FED7AA' },
+            { label: 'Counterboys', value: stats.counterboy, bg: 'rgba(15,118,110,0.2)', color: '#99F6E4' },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72 }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -198,7 +204,11 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
             <tab.Icon size={15} />
             {tab.label}
             <span style={{ background: activeTab === tab.id ? tab.color : C.border, color: activeTab === tab.id ? '#fff' : C.muted, fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 20 }}>
-              {tab.id === 'all' ? stats.all : tab.id === 'electrician' ? stats.electrician : stats.dealer}
+              {tab.id === 'all' ? stats.all
+                : tab.id === 'electrician' ? stats.electrician
+                : tab.id === 'dealer' ? stats.dealer
+                : tab.id === 'customer' ? stats.customer
+                : stats.counterboy}
             </span>
           </button>
         ))}
@@ -224,8 +234,8 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
                       <span style={{ background: tierColors[t.tier]?.bg || C.surface, color: tierColors[t.tier]?.color || C.muted, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>{t.tier}</span>
                       <span style={{ background: C.surface, color: C.muted, fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 6, border: `1px solid ${C.border}` }}>{t.yearsConnected}y</span>
                       {/* User category badge */}
-                      <span style={{ background: t.userCategory === 'electrician' ? '#EFF6FF' : t.userCategory === 'dealer' ? '#D1FAE5' : '#F5F3FF', color: t.userCategory === 'electrician' ? '#1D4ED8' : t.userCategory === 'dealer' ? '#065F46' : '#7C3AED', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>
-                        {t.userCategory === 'electrician' ? '⚡ Electrician' : t.userCategory === 'dealer' ? '🏬 Dealer' : '👥 All'}
+                      <span style={{ background: t.userCategory === 'electrician' ? '#EFF6FF' : t.userCategory === 'dealer' ? '#D1FAE5' : t.userCategory === 'customer' ? '#FFF7ED' : t.userCategory === 'counterboy' ? '#F0FDFA' : '#F5F3FF', color: t.userCategory === 'electrician' ? '#1D4ED8' : t.userCategory === 'dealer' ? '#065F46' : t.userCategory === 'customer' ? '#C2410C' : t.userCategory === 'counterboy' ? '#0F766E' : '#7C3AED', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>
+                        {t.userCategory === 'electrician' ? '⚡ Electrician' : t.userCategory === 'dealer' ? '🏬 Dealer' : t.userCategory === 'customer' ? '👤 Customer' : t.userCategory === 'counterboy' ? '🧾 Counterboy' : '👥 All'}
                       </span>
                       <span style={{ background: t.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)', color: t.isActive ? '#16A34A' : '#DC2626', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6 }}>{t.isActive ? 'Active' : 'Inactive'}</span>
                     </div>

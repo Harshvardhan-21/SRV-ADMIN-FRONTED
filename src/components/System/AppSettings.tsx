@@ -595,6 +595,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                     <option value="all">All Users</option>
                     <option value="electricians">All Electricians</option>
                     <option value="dealers">All Dealers</option>
+                    <option value="customers">All Customers</option>
+                    <option value="counterboys">All Counterboys</option>
                     <option value="specific">Specific User</option>
                   </select>
                 </div>
@@ -740,6 +742,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                   {notificationTarget === 'all' && ' This will send to ALL users in the app.'}
                   {notificationTarget === 'electricians' && ' This will send to ALL electricians.'}
                   {notificationTarget === 'dealers' && ' This will send to ALL dealers.'}
+                  {notificationTarget === 'customers' && ' This will send to ALL customers.'}
+                  {notificationTarget === 'counterboys' && ' This will send to ALL counterboys.'}
                   {notificationTarget === 'specific' && selectedUser && ` This will send to ${selectedUser.name} only.`}
                 </div>
               </div>

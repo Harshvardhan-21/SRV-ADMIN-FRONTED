@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Gift, Plus, Trash2, Upload, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil } from 'lucide-react';
+import { Gift, Plus, Trash2, Upload, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -14,10 +14,10 @@ interface GiftProduct {
   pointsRequired: number;
   stock: number;
   status: 'active' | 'inactive';
-  type: 'electrician' | 'dealer';
+  type: 'electrician' | 'dealer' | 'customer' | 'counterboy';
 }
 
-function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dealer'; onClose: () => void; onSave: (g: Omit<GiftProduct, 'id'>) => void; C: any }) {
+function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dealer' | 'customer' | 'counterboy'; onClose: () => void; onSave: (g: Omit<GiftProduct, 'id'>) => void; C: any }) {
   const [form, setForm] = useState({ name: '', image: '', pointsRequired: 500, stock: 10 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const imgRef = useRef<HTMLInputElement>(null);
@@ -189,7 +189,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
   const canDelete = isSuperAdmin;
   const [gifts, setGifts] = useState<GiftProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'electrician' | 'dealer'>('electrician');
+  const [tab, setTab] = useState<'electrician' | 'dealer' | 'customer' | 'counterboy'>('electrician');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -269,17 +269,22 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
         } catch (err) { console.error('Failed to update gift:', err); }
         setEditGift(null);
       }} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={tab === 'electrician' ? 'Electrician Gifts' : 'Dealer Gifts'} fileName={`gift-products-${tab}`} getData={() => filtered.map(g => ({ ID: g.id, Type: g.type, Name: g.name, Points: g.pointsRequired, Stock: g.stock, Status: g.status }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gifts`} fileName={`gift-products-${tab}`} getData={() => filtered.map(g => ({ ID: g.id, Type: g.type, Name: g.name, Points: g.pointsRequired, Stock: g.stock, Status: g.status }))} />
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #10B981, #059669)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}><Gift size={26} /> Gift Products</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>Manage gift catalog for electricians and dealers</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>Manage gift catalog for all user types</div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {[{ label: 'Electrician Gifts', value: gifts.filter(g => g.type === 'electrician').length }, { label: 'Dealer Gifts', value: gifts.filter(g => g.type === 'dealer').length }].map(s => (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Electrician Gifts', value: gifts.filter(g => g.type === 'electrician').length },
+            { label: 'Dealer Gifts',      value: gifts.filter(g => g.type === 'dealer').length },
+            { label: 'Customer Gifts',    value: gifts.filter(g => g.type === 'customer').length },
+            { label: 'Counterboy Gifts',  value: gifts.filter(g => g.type === 'counterboy').length },
+          ].map(s => (
             <div key={s.label} style={{ textAlign: 'center', padding: '10px 18px', background: 'rgba(255,255,255,0.15)', borderRadius: 12 }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: 'white' }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{s.label}</div>
@@ -291,7 +296,12 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
       {/* Tabs + Actions */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', background: C.card, borderRadius: 12, padding: 4, border: `1px solid ${C.border}`, gap: 4 }}>
-          {[{ id: 'electrician', label: 'Electrician Gifts', Icon: Zap }, { id: 'dealer', label: 'Dealer Gifts', Icon: Store }].map(t => (
+          {[
+            { id: 'electrician', label: 'Electrician Gifts', Icon: Zap },
+            { id: 'dealer',      label: 'Dealer Gifts',      Icon: Store },
+            { id: 'customer',    label: 'Customer Gifts',    Icon: User },
+            { id: 'counterboy',  label: 'Counterboy Gifts',  Icon: Package },
+          ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               style={{ padding: '9px 20px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7, background: tab === t.id ? '#10B981' : 'transparent', color: tab === t.id ? 'white' : C.muted, transition: 'all 0.2s' }}>
               <t.Icon size={15} /> {t.label}
@@ -363,9 +373,14 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
                 onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                 <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{g.id}</td>
                 <td style={{ padding: '14px 16px' }}>
-                  <span style={{ background: g.type === 'electrician' ? '#FFF0F0' : '#EFF6FF', color: g.type === 'electrician' ? '#C2410C' : '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
-                    {g.type === 'electrician' ? <Zap size={11} /> : <Store size={11} />}
-                    {g.type === 'electrician' ? 'Electrician' : 'Dealer'}
+                  <span style={{
+                    background: g.type === 'electrician' ? '#FFF0F0' : g.type === 'dealer' ? '#EFF6FF' : g.type === 'customer' ? '#FFF7ED' : '#F0FDFA',
+                    color: g.type === 'electrician' ? '#C2410C' : g.type === 'dealer' ? '#1D4ED8' : g.type === 'customer' ? '#C2410C' : '#0F766E',
+                    fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                    display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content',
+                  }}>
+                    {g.type === 'electrician' ? <Zap size={11} /> : g.type === 'dealer' ? <Store size={11} /> : g.type === 'customer' ? <User size={11} /> : <Package size={11} />}
+                    {g.type === 'electrician' ? 'Electrician' : g.type === 'dealer' ? 'Dealer' : g.type === 'customer' ? 'Customer' : 'Counterboy'}
                   </span>
                 </td>
                 <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: C.text }}>{g.name}</td>

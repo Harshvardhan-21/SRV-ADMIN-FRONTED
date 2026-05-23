@@ -238,6 +238,8 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
                 <option>All Users</option>
                 <option>Only Electricians</option>
                 <option>Only Dealers</option>
+                <option>Only Customers</option>
+                <option>Only Counterboys</option>
                 <option>Specific User</option>
               </select>
               {/* Specific user search */}
@@ -425,7 +427,7 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
               <div>
                 <label style={labelStyle}>Target Audience</label>
                 <select value={editForm.target} onChange={e => setEditForm(f => ({ ...f, target: e.target.value }))} style={inputStyle}>
-                  <option>All Users</option><option>Only Electricians</option><option>Only Dealers</option>
+                  <option>All Users</option><option>Only Electricians</option><option>Only Dealers</option><option>Only Customers</option><option>Only Counterboys</option>
                 </select>
               </div>
               <div>

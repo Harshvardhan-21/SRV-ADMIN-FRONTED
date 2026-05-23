@@ -52,7 +52,7 @@ export function ScanHistory() {
         {[
           { label: 'Total Scans', value: data.length, icon: '📷', color: '#3B82F6', bg: '#EFF6FF' },
           { label: 'By Electricians', value: data.filter(s => s.role === 'electrician').length, icon: '⚡', color: '#C2410C', bg: '#FFF7ED' },
-          { label: 'Points Awarded', value: data.reduce((a, s) => a + (s.points || 0), 0), icon: '⭐', color: '#92400E', bg: '#FFFBEB' },
+          { label: 'By Customers', value: data.filter(s => s.role === 'customer').length, icon: '👤', color: '#15803D', bg: '#F0FDF4' },
           { label: 'Multi-Scan', value: data.filter(s => s.mode === 'multi').length, icon: '🔄', color: '#065F46', bg: '#D1FAE5' },
         ].map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
@@ -66,7 +66,9 @@ export function ScanHistory() {
         <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
           <option value="all">All Roles</option>
           <option value="electrician">⚡ Electrician</option>
-          <option value="dealer">Dealer</option>
+          <option value="dealer">🏬 Dealer</option>
+          <option value="customer">👤 Customer</option>
+          <option value="counterboy">🧾 Counterboy</option>
         </select>
       </div>
       {loading ? <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading scans...</div> : (
@@ -86,7 +88,7 @@ export function ScanHistory() {
                 onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                 <td style={{ padding: '13px 16px' }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{s.userName || s.userId}</div>
-                  <span style={{ background: s.role === 'electrician' ? '#FFF7ED' : '#EFF6FF', color: s.role === 'electrician' ? '#C2410C' : '#1D4ED8', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{s.role === 'electrician' ? '⚡' : '🏬'} {s.role}</span>
+                  <span style={{ background: s.role === 'electrician' ? '#FFF7ED' : s.role === 'dealer' ? '#EFF6FF' : s.role === 'customer' ? '#F0FDF4' : '#FDF4FF', color: s.role === 'electrician' ? '#C2410C' : s.role === 'dealer' ? '#1D4ED8' : s.role === 'customer' ? '#15803D' : '#7C3AED', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{s.role === 'electrician' ? '⚡' : s.role === 'dealer' ? '🏬' : s.role === 'customer' ? '👤' : '🧾'} {s.role}</span>
                 </td>
                 <td style={{ padding: '13px 16px' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.productName || s.productId}</div>
@@ -248,7 +250,7 @@ export function Notifications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🔔 Notifications</h1>
-          <p style={{ color: C.muted, fontSize: 14 }}>Send push notifications to electricians and dealers</p>
+          <p style={{ color: C.muted, fontSize: 14 }}>Send push notifications to all app users</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ New Notification</button>
       </div>
@@ -264,7 +266,9 @@ export function Notifications() {
                 <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                   <option value="all">Everyone</option>
                   <option value="electrician">⚡ Electricians Only</option>
-                  <option value="dealer">Dealers Only</option>
+                  <option value="dealer">🏬 Dealers Only</option>
+                  <option value="customer">👤 Customers Only</option>
+                  <option value="counterboy">🧾 Counterboys Only</option>
                 </select>
               </div>
               <div><label style={labelStyle}>Send As</label>
@@ -289,16 +293,18 @@ export function Notifications() {
           const targetColors: Record<string, { bg: string; color: string }> = {
             electrician: { bg: '#FFF7ED', color: '#C2410C' },
             dealer: { bg: '#EFF6FF', color: '#1D4ED8' },
+            customer: { bg: '#F0FDF4', color: '#15803D' },
+            counterboy: { bg: '#FDF4FF', color: '#7C3AED' },
             all: { bg: '#F0FDF4', color: '#15803D' },
           };
-          const tc = targetColors[n.targetRole];
+          const tc = targetColors[n.targetRole] ?? targetColors.all;
           return (
             <div key={n.id} style={{ background: C.card, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                     <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.status}</span>
-                    <span style={{ background: tc.bg, color: tc.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.targetRole === 'all' ? '🌐 Everyone' : n.targetRole === 'electrician' ? '⚡ Electricians' : 'Dealers'}</span>
+                    <span style={{ background: tc.bg, color: tc.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.targetRole === 'all' ? '🌐 Everyone' : n.targetRole === 'electrician' ? '⚡ Electricians' : n.targetRole === 'dealer' ? '🏬 Dealers' : n.targetRole === 'customer' ? '👤 Customers' : '🧾 Counterboys'}</span>
                     {n.openRate && <span style={{ background: '#F5F3FF', color: '#5B21B6', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>📊 {n.openRate}% open rate</span>}
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 6 }}>{n.title}</div>
@@ -387,8 +393,10 @@ export function Offers() {
                 <div><label style={labelStyle}>Target Audience</label>
                   <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                     <option value="all">Everyone</option>
-                    <option value="electrician">Electricians Only</option>
-                    <option value="dealer">Dealers Only</option>
+                    <option value="electrician">⚡ Electricians Only</option>
+                    <option value="dealer">🏬 Dealers Only</option>
+                    <option value="customer">👤 Customers Only</option>
+                    <option value="counterboy">🧾 Counterboys Only</option>
                   </select>
                 </div>
                 <div><label style={labelStyle}>Status</label>
@@ -415,7 +423,7 @@ export function Offers() {
             <div key={o.id} style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{o.status}</span>
-                <span style={{ background: '#F1F5F9', color: C.muted, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{o.targetRole === 'all' ? '🌐 All' : o.targetRole === 'electrician' ? '⚡ Electricians' : 'Dealers'}</span>
+                <span style={{ background: '#F1F5F9', color: C.muted, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{o.targetRole === 'all' ? '🌐 All' : o.targetRole === 'electrician' ? '⚡ Electricians' : o.targetRole === 'dealer' ? '🏬 Dealers' : o.targetRole === 'customer' ? '👤 Customers' : '🧾 Counterboys'}</span>
               </div>
               <div style={{ fontSize: 22, fontWeight: 900, color: C.red, marginBottom: 4 }}>{o.discount}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 6 }}>{o.title}</div>
@@ -663,8 +671,10 @@ export function AppBanners() {
             <div><label style={labelStyle}>Target Audience</label>
               <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                 <option value="all">Everyone</option>
-                <option value="electrician">Electricians Only</option>
-                <option value="dealer">Dealers Only</option>
+                <option value="electrician">⚡ Electricians Only</option>
+                <option value="dealer">🏬 Dealers Only</option>
+                <option value="customer">👤 Customers Only</option>
+                <option value="counterboy">🧾 Counterboys Only</option>
               </select>
             </div>
             <div><label style={labelStyle}>Display Order</label><input style={inputStyle} type="number" value={numberInputValue(form.order)} onChange={e => f('order', e.target.value === '' ? 0 : Number(e.target.value))} /></div>

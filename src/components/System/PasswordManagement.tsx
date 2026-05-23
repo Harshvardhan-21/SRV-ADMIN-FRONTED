@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { Key, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { adminApi } from '@/lib/api';
+import { useThemePalette } from '@/lib/theme';
 import { PermissionGuard } from '@/components/Shared/PermissionGuard';
 
 interface Admin {
@@ -12,18 +14,19 @@ interface Admin {
 }
 
 export default function PasswordManagement() {
+  const C = useThemePalette();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    loadAdmins();
-  }, []);
+  useEffect(() => { loadAdmins(); }, []);
 
   const loadAdmins = async () => {
     setLoading(true);
@@ -52,26 +55,10 @@ export default function PasswordManagement() {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!newPassword || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (!selectedAdmin) {
-      setError('No admin selected');
-      return;
-    }
+    if (!newPassword || !confirmPassword) { setError('Please fill in all fields'); return; }
+    if (newPassword.length < 8) { setError('Password must be at least 8 characters long'); return; }
+    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (!selectedAdmin) { setError('No admin selected'); return; }
 
     try {
       setLoading(true);
@@ -79,10 +66,7 @@ export default function PasswordManagement() {
       setSuccess(`Password changed successfully for ${selectedAdmin.name}`);
       setNewPassword('');
       setConfirmPassword('');
-      setTimeout(() => {
-        setShowModal(false);
-        setSuccess('');
-      }, 2000);
+      setTimeout(() => { setShowModal(false); setSuccess(''); }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to change password');
     } finally {
@@ -90,192 +74,187 @@ export default function PasswordManagement() {
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return 'bg-purple-100 text-purple-800';
-      case 'admin':
-        return 'bg-blue-100 text-blue-800';
-      case 'staff':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const roleBadge = (role: string) => {
+    const map: Record<string, { bg: string; color: string; label: string }> = {
+      super_admin: { bg: 'rgba(124,58,237,0.15)', color: '#7C3AED', label: 'Super Admin' },
+      admin:       { bg: 'rgba(29,78,216,0.15)',  color: '#1D4ED8', label: 'Admin' },
+      staff:       { bg: 'rgba(100,116,139,0.15)', color: '#64748B', label: 'Staff' },
+    };
+    const s = map[role] ?? map.staff;
+    return (
+      <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
+        {s.label}
+      </span>
+    );
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
-      case 'staff':
-        return 'Staff';
-      default:
-        return role;
-    }
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 40px 10px 12px',
+    border: `1.5px solid ${C.border}`, borderRadius: 10,
+    fontSize: 14, outline: 'none',
+    background: C.inputBg, color: C.text,
+    boxSizing: 'border-box',
   };
 
   return (
     <PermissionGuard permission="changePasswords">
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Password Management</h1>
-          <p className="text-gray-600 mt-1">
-            Change passwords for all admin users (Super Admin only)
-          </p>
+      <div style={{ padding: '28px 32px', maxWidth: 1000 }}>
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #4338CA, #6366F1)', borderRadius: 16, padding: '22px 28px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Key size={24} color="#fff" />
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Password Management</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>Change passwords for admin users (Super Admin only)</div>
+          </div>
         </div>
 
+        {/* Inline alerts (outside modal) */}
         {error && !showModal && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{error}</p>
+          <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.dangerText, fontSize: 13, fontWeight: 600 }}>
+            {error}
           </div>
         )}
-
         {success && !showModal && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-800">{success}</p>
+          <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#16A34A', fontSize: 13, fontWeight: 600 }}>
+            {success}
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+        {/* Table */}
+        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: C.shadow }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: C.bg, borderBottom: `2px solid ${C.border}` }}>
+                {['Name', 'Email', 'Role', 'Status', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '13px 18px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {loading && admins.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                    Loading...
-                  </td>
-                </tr>
+                <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: C.muted, fontSize: 14 }}>Loading...</td></tr>
               ) : admins.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                    No admin users found
+                <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: C.muted, fontSize: 14 }}>No admin users found</td></tr>
+              ) : admins.map(admin => (
+                <tr key={admin.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
+                  onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
+                  <td style={{ padding: '13px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
+                        {admin.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{admin.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '13px 18px', fontSize: 13, color: C.muted }}>{admin.email}</td>
+                  <td style={{ padding: '13px 18px' }}>{roleBadge(admin.role)}</td>
+                  <td style={{ padding: '13px 18px' }}>
+                    <span style={{
+                      background: admin.status === 'active' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: admin.status === 'active' ? '#16A34A' : '#DC2626',
+                      fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'capitalize',
+                    }}>
+                      {admin.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '13px 18px' }}>
+                    <button
+                      onClick={() => handleChangePassword(admin)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: C.accentSoft, color: C.accentText, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      <Lock size={13} /> Change Password
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                admins.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{admin.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{admin.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(admin.role)}`}>
-                        {getRoleLabel(admin.role)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        admin.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {admin.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleChangePassword(admin)}
-                        className="text-indigo-600 hover:text-indigo-900 font-medium"
-                      >
-                        Change Password
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
 
         {/* Password Change Modal */}
         {showModal && selectedAdmin && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Change Password for {selectedAdmin.name}
-              </h2>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onClick={() => setShowModal(false)}>
+            <div style={{ background: C.card, borderRadius: 20, width: 440, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', border: `1px solid ${C.border}` }}
+              onClick={e => e.stopPropagation()}>
 
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-                  <p className="text-red-800 text-sm">{error}</p>
+              {/* Modal Header */}
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: C.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Shield size={20} color={C.accentText} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Change Password</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{selectedAdmin.name}</div>
+                  </div>
                 </div>
-              )}
+                <button onClick={() => setShowModal(false)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✕</button>
+              </div>
 
-              {success && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-                  <p className="text-green-800 text-sm">{success}</p>
-                </div>
-              )}
-
+              {/* Modal Body */}
               <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Enter new password"
-                    minLength={8}
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Minimum 8 characters
-                  </p>
+                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {error && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: C.dangerBg, border: `1px solid ${C.dangerBorder}`, color: C.dangerText, fontSize: 13, fontWeight: 600 }}>
+                      {error}
+                    </div>
+                  )}
+                  {success && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#16A34A', fontSize: 13, fontWeight: 600 }}>
+                      {success}
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showNew ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        minLength={8}
+                        required
+                        style={inputStyle}
+                      />
+                      <button type="button" onClick={() => setShowNew(v => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4 }}>
+                        {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>Minimum 8 characters</div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confirm Password</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        minLength={8}
+                        required
+                        style={inputStyle}
+                      />
+                      <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 4 }}>
+                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Confirm new password"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    disabled={loading}
-                  >
+                {/* Modal Footer */}
+                <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => setShowModal(false)} disabled={loading}
+                    style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-                    disabled={loading}
-                  >
+                  <button type="submit" disabled={loading}
+                    style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: loading ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
                     {loading ? 'Changing...' : 'Change Password'}
                   </button>
                 </div>

@@ -8,7 +8,7 @@ interface Enquiry {
   id: string;
   userId: string;
   userName: string;
-  userType: 'Electrician' | 'Dealer';
+  userType: 'Electrician' | 'Dealer' | 'Customer' | 'Counterboy';
   userPhone: string;
   userEmail?: string;
   subject: string;
@@ -48,7 +48,7 @@ export default function EnquirySupport() {
         id: e.id,
         userId: e.userId ?? e.user_id ?? '',
         userName: e.userName ?? e.user_name ?? e.user?.name ?? 'Unknown',
-        userType: e.userType ?? e.user_type ?? 'Electrician',
+        userType: e.userType ?? e.user_type ?? 'Unknown',
         userPhone: e.userPhone ?? e.user_phone ?? e.user?.phone ?? '',
         userEmail: e.userEmail ?? e.user_email ?? e.user?.email,
         subject: e.subject ?? '',

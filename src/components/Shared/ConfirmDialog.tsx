@@ -1,5 +1,6 @@
 'use client';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { useThemePalette } from '@/lib/theme';
 
 interface ConfirmDialogProps {
   show: boolean;
@@ -13,6 +14,7 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({ show, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel', type = 'success' }: ConfirmDialogProps) {
+  const C = useThemePalette();
   if (!show) return null;
 
   const styles = {
@@ -35,12 +37,13 @@ export default function ConfirmDialog({ show, title, message, onConfirm, onCance
       justifyContent: 'center',
     }} onClick={onCancel}>
       <div style={{
-        background: 'white',
+        background: C.card,
         borderRadius: 16,
         padding: 24,
         width: 400,
         maxWidth: '90vw',
         boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+        border: `1px solid ${C.border}`,
         animation: 'modalSlideIn 0.2s ease',
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
@@ -55,16 +58,16 @@ export default function ConfirmDialog({ show, title, message, onConfirm, onCance
           }}>
             {type === 'success' ? <CheckCircle size={24} color={s.iconColor} /> : <XCircle size={24} color={s.iconColor} />}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>{title}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{title}</div>
         </div>
-        <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 24, lineHeight: 1.5 }}>{message}</div>
+        <div style={{ fontSize: 14, color: C.muted, marginBottom: 24, lineHeight: 1.5 }}>{message}</div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '10px 20px',
             borderRadius: 10,
-            border: '1px solid #E5E7EB',
-            background: '#F9FAFB',
-            color: '#6B7280',
+            border: `1px solid ${C.border}`,
+            background: C.surface,
+            color: C.muted,
             fontSize: 14,
             fontWeight: 600,
             cursor: 'pointer',

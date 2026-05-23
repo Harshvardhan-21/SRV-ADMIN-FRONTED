@@ -28,6 +28,7 @@ import { PointsConfig, Reports, ScanHistory, Redemptions } from '@/components/Sy
 import AdminSettings from '@/components/System/AdminSettings';
 import AppSettings from '@/components/System/AppSettings';
 import AppPageControls from '@/components/System/AppPageControls';
+import AppIcons from '@/components/System/AppIcons';
 import AppUserHub from '@/components/AppUser/AppUserHub';
 import CounterBoyHub from '@/components/CounterBoy/CounterBoyHub';
 import { exportRowsToExcel } from '@/lib/excel';
@@ -71,6 +72,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   redemptions: { title: 'Redemptions', Icon: Gift },
   reports: { title: 'Reports', Icon: BarChart2 },
   'app-page-controls': { title: 'App Page Controls', Icon: Smartphone },
+  'app-icons': { title: 'App Icons', Icon: Smartphone },
   };
 
 export default function Home() {
@@ -319,6 +321,7 @@ export default function Home() {
       case 'admin-settings': return role === 'super_admin' ? <AdminSettings /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'app-settings': return <AppSettings role={role} />;
       case 'app-page-controls': return <AppPageControls role={role} />;
+      case 'app-icons': return <AppIcons role={role} />;
       default: return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
     }
   };

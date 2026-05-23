@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutGrid, RotateCcw, Save, Settings2, Smartphone, Type } from 'lucide-react';
 import { settingsApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -68,9 +68,14 @@ type ContentPageKey =
   | 'rate_us'
   | 'support';
 
+type HomePageSectionKey = 'hero_banner' | 'home_banner' | 'quick_actions' | 'browse_categories' | 'testimonials' | 'website_promo';
+
+type PageSectionOrder = Record<UserRole, Partial<Record<ContentPageKey, HomePageSectionKey[]>>>;
+
 type ContentFieldKey =
   | 'pageTitle'
   | 'pageSubtitle'
+  | 'eyebrowText'
   | 'heroTitle'
   | 'heroSubtitle'
   | 'sectionTitle'
@@ -84,7 +89,21 @@ type ContentFieldKey =
   | 'searchPlaceholder'
   | 'inputLabel'
   | 'cardTitle'
-  | 'cardSubtitle';
+  | 'cardSubtitle'
+  | 'flipHintText'
+  | 'codeLabel'
+  | 'locationLabel'
+  | 'nameLabel'
+  | 'thirdDetailLabel'
+  | 'actionLabel'
+  | 'actionSubtitle'
+  | 'statLabel'
+  | 'statValue'
+  | 'statHint'
+  | 'testimonialEyebrow'
+  | 'testimonialTitle'
+  | 'testimonialSubtitle'
+  | 'cardButtonLabel';
 
 type RolePageControls = Record<UserRole, Record<AppFeatureKey, boolean>>;
 type AppPageContentFields = Partial<Record<ContentFieldKey, string>>;
@@ -283,6 +302,7 @@ const ROLE_META: Record<UserRole, { label: string; accent: string; blurb: string
 const CONTENT_FIELD_META: { key: ContentFieldKey; label: string; hint: string; textarea?: boolean }[] = [
   { key: 'pageTitle', label: 'Page Title', hint: 'Header title shown at the top of the page' },
   { key: 'pageSubtitle', label: 'Page Subtitle', hint: 'Optional short subtitle below the title' },
+  { key: 'eyebrowText', label: 'Eyebrow Text', hint: 'Small account/role label shown on cards' },
   { key: 'heroTitle', label: 'Hero Title', hint: 'Main hero headline or top focus text' },
   { key: 'heroSubtitle', label: 'Hero Subtitle', hint: 'Supporting hero copy below the headline', textarea: true },
   { key: 'sectionTitle', label: 'Section Title', hint: 'Primary section heading inside the page' },
@@ -293,10 +313,24 @@ const CONTENT_FIELD_META: { key: ContentFieldKey; label: string; hint: string; t
   { key: 'searchPlaceholder', label: 'Search Placeholder', hint: 'Search / input placeholder text' },
   { key: 'primaryCtaLabel', label: 'Primary Button', hint: 'Main action button label' },
   { key: 'secondaryCtaLabel', label: 'Secondary Button', hint: 'Secondary action button label' },
+  { key: 'flipHintText', label: 'Flip Hint', hint: 'Hint shown on the profile flip card', textarea: true },
+  { key: 'codeLabel', label: 'Code Label', hint: 'Label for the code shown on the profile card' },
+  { key: 'locationLabel', label: 'Location Label', hint: 'Location label shown on the profile card' },
+  { key: 'nameLabel', label: 'Name Label', hint: 'Name label shown on the back side of the card' },
+  { key: 'thirdDetailLabel', label: 'Third Detail Label', hint: 'Address or phone label shown on the back side', textarea: true },
   { key: 'emptyStateTitle', label: 'Empty State Title', hint: 'Message when no data is available', textarea: true },
   { key: 'emptyStateSubtitle', label: 'Empty State Subtitle', hint: 'Extra empty-state helper copy', textarea: true },
   { key: 'helperText', label: 'Helper Text', hint: 'Small note or guidance shown below controls', textarea: true },
   { key: 'supportText', label: 'Support Text', hint: 'Extra support/help copy or action subtitle', textarea: true },
+  { key: 'actionLabel', label: 'Action Label', hint: 'Label for action buttons / quick action cards' },
+  { key: 'actionSubtitle', label: 'Action Subtitle', hint: 'Subtitle below action buttons' },
+  { key: 'statLabel', label: 'Stat Label', hint: 'Stat card heading (e.g. Need Help, My Cart)' },
+  { key: 'statValue', label: 'Stat Value', hint: 'Stat card main value text (e.g. Support, Products)' },
+  { key: 'statHint', label: 'Stat Hint', hint: 'Stat card hint/sublabel text' },
+  { key: 'testimonialEyebrow', label: 'Testimonial Eyebrow', hint: 'Small label above testimonials section' },
+  { key: 'testimonialTitle', label: 'Testimonial Title', hint: 'Main heading for testimonials section' },
+  { key: 'testimonialSubtitle', label: 'Testimonial Subtitle', hint: 'Subtitle below testimonial heading' },
+  { key: 'cardButtonLabel', label: 'Card Button Label', hint: 'Button text inside cards (e.g. View Products)' },
 ];
 
 const ROLE_PAGE_META: Record<UserRole, { key: ContentPageKey; label: string; hint: string }[]> = {
@@ -419,6 +453,16 @@ const DEFAULT_PAGE_COPY: AppPageContentMap = {
       emptyStateTitle: 'No detailed records yet',
       emptyStateSubtitle: 'Your complete wallet history will appear here once bank payouts or dealer bonus activity starts.',
     },
+    profile: {
+      pageTitle: 'My Profile',
+      eyebrowText: 'Dealer Partner',
+      cardTitle: 'Business Details',
+      flipHintText: 'Tap card to view QR and dealer details',
+      codeLabel: 'Dealer Code',
+      locationLabel: 'Location',
+      nameLabel: 'Name',
+      thirdDetailLabel: 'Address',
+    },
     electricians: {
       pageTitle: 'Dealer Network',
       heroTitle: 'Connected electricians',
@@ -485,6 +529,16 @@ const DEFAULT_PAGE_COPY: AppPageContentMap = {
       emptyStateTitle: 'No detailed records yet',
       emptyStateSubtitle: 'Start scanning products and your reward credits will appear here automatically.',
     },
+    profile: {
+      pageTitle: 'My Profile',
+      eyebrowText: 'Electrician Partner',
+      cardTitle: 'Account Details',
+      flipHintText: 'Tap card to view QR and account details',
+      codeLabel: 'Electrician Code',
+      locationLabel: 'Location',
+      nameLabel: 'Name',
+      thirdDetailLabel: 'Address',
+    },
     notifications: {
       pageTitle: 'Notification Center',
       heroTitle: 'Stay updated with SRV',
@@ -514,6 +568,16 @@ const DEFAULT_PAGE_COPY: AppPageContentMap = {
       emptyStateSubtitle: 'Browse categories, explore products and add items here for a cleaner enquiry flow.',
       primaryCtaLabel: 'Browse Products',
     },
+    profile: {
+      pageTitle: 'My Profile',
+      eyebrowText: 'Customer Account',
+      cardTitle: 'Account Details',
+      flipHintText: 'Tap card to view QR and account details',
+      codeLabel: 'Customer ID',
+      locationLabel: 'Location',
+      nameLabel: 'Name',
+      thirdDetailLabel: 'Address',
+    },
     rewards: {
       pageTitle: 'Gift Store',
       sectionTitle: 'Gift Store',
@@ -539,6 +603,16 @@ const DEFAULT_PAGE_COPY: AppPageContentMap = {
       sectionSubtitle: 'Browse the SRV range and support tools for counter operations.',
       primaryCtaLabel: 'View all',
     },
+    profile: {
+      pageTitle: 'My Profile',
+      eyebrowText: 'Counter Boy Account',
+      cardTitle: 'Account Details',
+      flipHintText: 'Tap card to view QR and account details',
+      codeLabel: 'Counter Boy ID',
+      locationLabel: 'Location',
+      nameLabel: 'Name',
+      thirdDetailLabel: 'Address',
+    },
     product: {
       pageTitle: 'All Products',
       searchPlaceholder: 'Search all products...',
@@ -562,6 +636,26 @@ const DEFAULT_PAGE_COPY: AppPageContentMap = {
       emptyStateSubtitle: "You're all caught up. New updates will appear here.",
     },
   },
+};
+
+const SECTION_LABELS: Record<HomePageSectionKey, string> = {
+  hero_banner: 'Hero & Banner',
+  home_banner: 'Banner Carousel',
+  quick_actions: 'Quick Actions',
+  browse_categories: 'Browse Categories',
+  testimonials: 'Testimonials',
+  website_promo: 'Website Promo',
+};
+
+const ALL_HOME_SECTIONS: HomePageSectionKey[] = [
+  'hero_banner', 'home_banner', 'quick_actions', 'browse_categories', 'testimonials', 'website_promo',
+];
+
+const DEFAULT_SECTION_ORDER: PageSectionOrder = {
+  electrician: { home: [...ALL_HOME_SECTIONS] },
+  dealer: { home: [...ALL_HOME_SECTIONS] },
+  user: { home: [...ALL_HOME_SECTIONS] },
+  counterboy: { home: [...ALL_HOME_SECTIONS] },
 };
 
 const PAGE_TO_FEATURE: Partial<Record<ContentPageKey, AppFeatureKey>> = {
@@ -670,15 +764,54 @@ function getDefaultFieldValue(role: UserRole, page: ContentPageKey, field: Conte
   return '';
 }
 
+const PREVIEW_BASE_URL_STORAGE_KEY = 'srv-admin-preview-base-url';
+const DEFAULT_PREVIEW_BASE_URL = 'http://localhost:8081';
+const PREVIEW_MESSAGE_TYPE = 'srv-admin-live-preview';
+type PreviewAuthMode = 'guest' | 'authenticated';
+
+function buildPreviewUrl(
+  baseUrl: string,
+  role: UserRole,
+  page: ContentPageKey,
+  authMode: PreviewAuthMode,
+  refreshKey: number
+) {
+  const normalizedBase = (baseUrl || DEFAULT_PREVIEW_BASE_URL).trim().replace(/\/+$/, '');
+  let previewUrl: URL;
+
+  try {
+    previewUrl = new URL(`${normalizedBase || DEFAULT_PREVIEW_BASE_URL}/`);
+  } catch {
+    previewUrl = new URL(`${DEFAULT_PREVIEW_BASE_URL}/`);
+  }
+
+  previewUrl.searchParams.set('preview', '1');
+  previewUrl.searchParams.set('role', role);
+  previewUrl.searchParams.set('page', page);
+  previewUrl.searchParams.set('auth', authMode);
+  previewUrl.searchParams.set('embedded', '1');
+  previewUrl.searchParams.set('refresh', String(refreshKey));
+  return previewUrl.toString();
+}
+
 export default function AppPageControls({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
   const canEdit = role === 'super_admin' || role === 'admin';
   const [controls, setControls] = useState<RolePageControls>(DEFAULT_CONTROLS);
   const [pageContent, setPageContent] = useState<AppPageContentMap>(DEFAULT_PAGE_CONTENT);
+  const [sectionOrder, setSectionOrder] = useState<PageSectionOrder>(DEFAULT_SECTION_ORDER);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeRole, setActiveRole] = useState<UserRole>('electrician');
+  const [previewAuthMode, setPreviewAuthMode] = useState<PreviewAuthMode>('guest');
+  const [previewBaseUrl, setPreviewBaseUrl] = useState(DEFAULT_PREVIEW_BASE_URL);
+  const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+  const [previewReady, setPreviewReady] = useState(false);
+  const [previewFloating, setPreviewFloating] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState({ x: 24, y: 100 });
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [activePageByRole, setActivePageByRole] = useState<Record<UserRole, ContentPageKey>>({
     electrician: getDefaultPage('electrician'),
     dealer: getDefaultPage('dealer'),
@@ -687,11 +820,25 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedValue = window.localStorage.getItem(PREVIEW_BASE_URL_STORAGE_KEY);
+    if (storedValue?.trim()) {
+      setPreviewBaseUrl(storedValue.trim());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(PREVIEW_BASE_URL_STORAGE_KEY, previewBaseUrl);
+  }, [previewBaseUrl]);
+
+  useEffect(() => {
     settingsApi
       .getAll()
       .then((rows: any[]) => {
         const controlRow = rows?.find((item: any) => item.key === 'rolePageControls');
         const contentRow = rows?.find((item: any) => item.key === 'appPageContent');
+        const sectionRow = rows?.find((item: any) => item.key === 'pageSectionOrder');
 
         if (controlRow?.value) {
           try {
@@ -707,6 +854,22 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
           } catch {
             setPageContent(DEFAULT_PAGE_CONTENT);
           }
+        }
+
+        if (sectionRow?.value) {
+          try {
+            const parsed: PageSectionOrder = JSON.parse(sectionRow.value);
+            const next: PageSectionOrder = JSON.parse(JSON.stringify(DEFAULT_SECTION_ORDER));
+            for (const r of Object.keys(DEFAULT_SECTION_ORDER) as UserRole[]) {
+              for (const p of Object.keys(DEFAULT_SECTION_ORDER[r]) as ContentPageKey[]) {
+                const arr = parsed[r]?.[p];
+                if (Array.isArray(arr) && arr.length > 0 && arr.every(s => ALL_HOME_SECTIONS.includes(s as HomePageSectionKey))) {
+                  next[r][p] = arr as HomePageSectionKey[];
+                }
+              }
+            }
+            setSectionOrder(next);
+          } catch { /* use default */ }
         }
       })
       .catch(console.error)
@@ -730,6 +893,12 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
   const activePage = activePageByRole[activeRole];
   const activePageMeta = activePages.find((item) => item.key === activePage) ?? activePages[0];
   const activePageFields = pageContent[activeRole][activePageMeta.key] ?? {};
+  const previewAccent = ROLE_META[activeRole].accent;
+  const hasDraftChanges = Object.values(activePageFields).some((value) => typeof value === 'string' && value.trim());
+  const previewUrl = useMemo(
+    () => buildPreviewUrl(previewBaseUrl, activeRole, activePageMeta.key, previewAuthMode, previewRefreshKey),
+    [activePageMeta.key, activeRole, previewAuthMode, previewBaseUrl, previewRefreshKey]
+  );
   const activeFeatureGroups = useMemo(() => {
     const allowed = new Set(ROLE_ALLOWED_FEATURES[activeRole]);
     return FEATURE_GROUPS.map((group) => ({
@@ -793,16 +962,88 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
     }));
   };
 
+  const moveSection = (section: HomePageSectionKey, direction: 'up' | 'down') => {
+    if (!canEdit) return;
+    setSectionOrder((current) => {
+      const arr = [...(current[activeRole]?.[activePageMeta.key] ?? ALL_HOME_SECTIONS)];
+      const idx = arr.indexOf(section);
+      if (idx === -1) return current;
+      const target = direction === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= arr.length) return current;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return {
+        ...current,
+        [activeRole]: {
+          ...current[activeRole],
+          [activePageMeta.key]: arr,
+        },
+      };
+    });
+  };
+
+  const pushPreviewState = useCallback(() => {
+    if (!iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage(
+      {
+        type: PREVIEW_MESSAGE_TYPE,
+        preview: true,
+        role: activeRole,
+        page: activePageMeta.key,
+        authMode: previewAuthMode,
+        appPageContent: pageContent,
+        rolePageControls: controls,
+        pageSectionOrder: sectionOrder,
+      },
+      '*'
+    );
+  }, [activePageMeta.key, activeRole, controls, pageContent, sectionOrder, previewAuthMode]);
+
+  useEffect(() => {
+    setPreviewReady(false);
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (!previewReady) return;
+    pushPreviewState();
+  }, [controls, pageContent, previewReady, pushPreviewState]);
+
+  useEffect(() => {
+    if (!dragOffset) return;
+
+    const handleMove = (event: MouseEvent) => {
+      setPreviewPosition({
+        x: Math.max(12, event.clientX - dragOffset.x),
+        y: Math.max(12, event.clientY - dragOffset.y),
+      });
+    };
+
+    const handleUp = () => setDragOffset(null);
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [dragOffset]);
+
   const handleSave = async () => {
     if (!canEdit) return;
     setSaving(true);
     try {
-      await Promise.all([
+      const results = await Promise.allSettled([
         settingsApi.update('rolePageControls', JSON.stringify(controls)),
         settingsApi.update('appPageContent', JSON.stringify(pageContent)),
+        settingsApi.update('pageSectionOrder', JSON.stringify(sectionOrder)),
       ]);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      const failures = results.filter(r => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.error('Save partial failures:', failures.length, 'of 3 failed');
+      }
+      if (failures.length === 0) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
     } catch (err) {
       console.error('Failed to save app page controls', err);
     } finally {
@@ -834,6 +1075,72 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
     fontSize: 13,
     fontFamily: 'inherit',
   };
+  const previewPhoneFrame = (
+    <div
+      style={{
+        width: '100%',
+        maxWidth: 390,
+        borderRadius: 36,
+        padding: 14,
+        background: 'linear-gradient(160deg, #0F172A, #1E293B 48%, #334155)',
+        boxShadow: '0 22px 44px rgba(15,23,42,0.22)',
+      }}
+    >
+      <div
+        style={{
+          borderRadius: 28,
+          background: '#F8FAFC',
+          padding: 10,
+          minHeight: 676,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <div style={{ width: 72, height: 6, borderRadius: 999, background: '#CBD5E1', margin: '0 auto 10px' }} />
+        <div style={{ borderRadius: 22, overflow: 'hidden', background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 12px 24px rgba(15,23,42,0.10)', minHeight: 620, position: 'relative' }}>
+          <iframe
+            key={previewUrl}
+            ref={iframeRef}
+            src={previewUrl}
+            title={`${ROLE_META[activeRole].label} ${activePageMeta.label} live preview`}
+            onLoad={() => {
+              setPreviewReady(true);
+              window.setTimeout(() => pushPreviewState(), 120);
+            }}
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            style={{
+              width: '100%',
+              height: 620,
+              border: 'none',
+              background: '#fff',
+              display: 'block',
+            }}
+          />
+          {!previewReady ? (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(248,250,252,0.94)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: 24,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#0F172A' }}>Waiting for real app preview</div>
+                <div style={{ fontSize: 12.5, color: '#64748B', lineHeight: 1.55, marginTop: 8 }}>
+                  Start the app web server, then tap reload. Your draft will be pushed into the actual page automatically.
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return <div style={{ padding: '28px 32px', color: C.muted }}>Loading app page controls...</div>;
@@ -952,16 +1259,16 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
             </div>
           ))}
 
-          <div style={{ ...card, padding: 18 }}>
+          <div style={{ ...card, padding: 18, background: `linear-gradient(180deg, ${C.card}, ${C.surface})` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 38, height: 38, borderRadius: 12, background: `${ROLE_META[activeRole].accent}12`, color: ROLE_META[activeRole].accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Type size={18} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Live Page Content</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Live Page Studio</div>
                   <div style={{ fontSize: 12, color: C.muted }}>
-                    Fields below already show the current app text. Change anything here and save to override it.
+                    Edit on the left and preview the real app screen here before you save anything live.
                   </div>
                 </div>
               </div>
@@ -971,7 +1278,7 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '260px minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '240px minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
               <div style={{ border: `1px solid ${C.border}`, borderRadius: 16, padding: 12, background: C.surface }}>
                 <div style={{ ...sectionTitle, marginBottom: 12 }}>Pages</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1018,6 +1325,41 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
                   </div>
                 </div>
 
+                {/* Section Order (Home page only) */}
+                {activePageMeta.key === 'home' && (
+                  <div style={{ marginBottom: 20, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, background: C.card }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>Page Section Order</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Drag or move sections up/down</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {(sectionOrder[activeRole]?.[activePageMeta.key] ?? ALL_HOME_SECTIONS).map((sec, idx, arr) => (
+                        <div key={sec} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 12px', borderRadius: 8,
+                          background: C.surface, border: `1px solid ${C.border}`,
+                        }}>
+                          <div style={{
+                            width: 24, height: 24, borderRadius: 6,
+                            background: `${previewAccent}15`, color: previewAccent,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, fontWeight: 900,
+                          }}>{idx + 1}</div>
+                          <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: C.text }}>{SECTION_LABELS[sec] ?? sec}</div>
+                          <button onClick={() => moveSection(sec, 'up')} disabled={idx === 0 || !canEdit}
+                            style={{ border: `1px solid ${C.border}`, background: 'transparent', borderRadius: 6, width: 28, height: 28, cursor: idx > 0 && canEdit ? 'pointer' : 'not-allowed', opacity: idx > 0 && canEdit ? 1 : 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text }} title="Move up">
+                            ▲
+                          </button>
+                          <button onClick={() => moveSection(sec, 'down')} disabled={idx === arr.length - 1 || !canEdit}
+                            style={{ border: `1px solid ${C.border}`, background: 'transparent', borderRadius: 6, width: 28, height: 28, cursor: idx < arr.length - 1 && canEdit ? 'pointer' : 'not-allowed', opacity: idx < arr.length - 1 && canEdit ? 1 : 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text }} title="Move down">
+                            ▼
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
                   {CONTENT_FIELD_META.map((field) => (
                     <label key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -1063,10 +1405,213 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
                   ))}
                 </div>
               </div>
+
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 24,
+                  padding: 18,
+                  background: `radial-gradient(circle at top left, ${previewAccent}12, ${C.surface} 38%, ${C.card} 100%)`,
+                  boxShadow: '0 18px 40px rgba(15,23,42,0.08)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 17, fontWeight: 900, color: C.text }}>Real App Preview</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+                      {previewReady
+                        ? 'This is the actual app page running in preview mode with your current draft.'
+                        : 'Loading the real app page. If nothing appears, start the app web preview and reload.'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: previewAccent, borderRadius: 999, padding: '5px 8px' }}>
+                      {hasDraftChanges ? 'Draft Mode' : 'Default Mode'}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: C.text, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 999, padding: '5px 8px' }}>
+                      Not live until save
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ borderRadius: 18, border: `1px solid ${C.border}`, background: '#FFFFFFCC', padding: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Preview Source
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.55, marginTop: 6 }}>
+                    Point this to your real app web server. Default is Expo web on `http://localhost:8081`.
+                  </div>
+                  <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                    <input
+                      value={previewBaseUrl}
+                      onChange={(e) => setPreviewBaseUrl(e.target.value)}
+                      placeholder={DEFAULT_PREVIEW_BASE_URL}
+                      style={inputStyle}
+                    />
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setPreviewAuthMode('guest')}
+                        style={{
+                          border: previewAuthMode === 'guest' ? 'none' : `1px solid ${C.border}`,
+                          background: previewAuthMode === 'guest' ? previewAccent : C.surface,
+                          color: previewAuthMode === 'guest' ? '#fff' : C.text,
+                          padding: '9px 12px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Guest Preview
+                      </button>
+                      <button
+                        onClick={() => setPreviewAuthMode('authenticated')}
+                        style={{
+                          border: previewAuthMode === 'authenticated' ? 'none' : `1px solid ${C.border}`,
+                          background: previewAuthMode === 'authenticated' ? previewAccent : C.surface,
+                          color: previewAuthMode === 'authenticated' ? '#fff' : C.text,
+                          padding: '9px 12px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Logged-in Preview
+                      </button>
+                      <button
+                        onClick={() => setPreviewFloating((current) => !current)}
+                        style={{
+                          border: `1px solid ${C.border}`,
+                          background: previewFloating ? `${previewAccent}14` : C.surface,
+                          color: C.text,
+                          padding: '9px 12px',
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {previewFloating ? 'Dock Preview' : 'Floating Preview'}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setPreviewRefreshKey((current) => current + 1)}
+                        style={{
+                          border: 'none',
+                          background: previewAccent,
+                          color: '#fff',
+                          padding: '10px 14px',
+                          borderRadius: 12,
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reload Real Preview
+                      </button>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: C.text, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 999, padding: '5px 8px' }}>
+                        {ROLE_META[activeRole].label} / {activePageMeta.label}
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: C.text, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 999, padding: '5px 8px' }}>
+                        {previewAuthMode === 'authenticated' ? 'Logged-in' : 'Guest'} Mode
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11.5, lineHeight: 1.55, color: C.muted }}>
+                      If the phone stays blank, run `npm run web` inside the `NEW APP` project and keep this preview URL on the same port.
+                    </div>
+                  </div>
+                </div>
+
+                {!previewFloating ? (
+                  <div
+                    style={{
+                      padding: '12px 8px 0',
+                      minHeight: 760,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {previewPhoneFrame}
+                  </div>
+                ) : (
+                  <div style={{ borderRadius: 18, border: `1px dashed ${C.border}`, background: '#FFFFFFB8', padding: 16, textAlign: 'center', color: C.muted, fontSize: 12.5 }}>
+                    Floating preview is active. Drag the phone window anywhere on the screen.
+                  </div>
+                )}
+
+                <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+                  <div style={{ borderRadius: 16, border: `1px solid ${C.border}`, background: '#FFFFFFB8', padding: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Preview Flow</div>
+                    <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.55, marginTop: 6 }}>
+                      1. Select role and page. 2. Pick guest or logged-in mode. 3. Edit text. 4. Check the real screen before save.
+                    </div>
+                  </div>
+                  <div style={{ borderRadius: 16, border: `1px solid ${previewAccent}25`, background: `${previewAccent}10`, padding: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: previewAccent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>What You Are Seeing</div>
+                    <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.55, marginTop: 6 }}>
+                      This is the same app screen opened in web preview mode, not a fake card. Draft content is pushed into that live screen before publish.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      {previewFloating ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: previewPosition.x,
+            top: previewPosition.y,
+            zIndex: 60,
+            width: 420,
+          }}
+        >
+          <div style={{ borderRadius: 22, border: `1px solid ${C.border}`, background: '#FFFFFFF0', boxShadow: '0 24px 60px rgba(15,23,42,0.22)', overflow: 'hidden' }}>
+            <div
+              onMouseDown={(event) => setDragOffset({ x: event.clientX - previewPosition.x, y: event.clientY - previewPosition.y })}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '12px 14px',
+                cursor: 'move',
+                background: `linear-gradient(135deg, ${previewAccent}18, #FFFFFF)`,
+                borderBottom: `1px solid ${C.border}`,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: C.text }}>Floating Real Preview</div>
+                <div style={{ fontSize: 11.5, color: C.muted }}>{ROLE_META[activeRole].label} / {activePageMeta.label}</div>
+              </div>
+              <button
+                onClick={() => setPreviewFloating(false)}
+                style={{
+                  border: `1px solid ${C.border}`,
+                  background: C.surface,
+                  color: C.text,
+                  padding: '7px 10px',
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Dock
+              </button>
+            </div>
+            <div style={{ padding: 12 }}>
+              {previewPhoneFrame}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
