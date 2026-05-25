@@ -9,6 +9,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 interface ElectricianKYCItem {
   id: string;
   name: string;
+  phone: string;
   electricianCode: string;
   kycStatus: 'not_submitted' | 'pending' | 'verified' | 'rejected';
   aadharNumber?: string;
@@ -138,16 +139,27 @@ export default function ElectricianKYC() {
   useEffect(() => {
     electricianApi.getAll({ limit: '500' }).then(res => {
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
+
+      // Normalize any LAN IP in image URLs to localhost for admin browser
+      const normalizeUrl = (url?: string) => {
+        if (!url) return url;
+        return url.replace(
+          /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
+          (_, _ip, port) => `http://localhost${port || ''}`
+        );
+      };
+
       setDocuments(data.map((e: any) => ({
         id: e.id,
         name: e.name,
+        phone: e.phone,
         electricianCode: e.electricianCode,
         kycStatus: e.kycStatus ?? 'not_submitted',
         aadharNumber: e.aadharNumber,
         panNumber: e.panNumber,
-        aadharFrontImage: e.aadharFrontImage,
-        panDocument: e.panDocument,
-        gstDocument: e.gstDocument,
+        aadharFrontImage: normalizeUrl(e.aadharFrontImage),
+        panDocument: normalizeUrl(e.panDocument),
+        gstDocument: normalizeUrl(e.gstDocument),
         kycRejectionReason: e.kycRejectionReason,
         joinedDate: e.joinedDate,
       })));
@@ -155,9 +167,20 @@ export default function ElectricianKYC() {
   }, []);
 
   const filtered = documents.filter(k => {
-    const matchSearch = k.name.toLowerCase().includes(search.toLowerCase()) || k.electricianCode.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search ||
+      k.name.toLowerCase().includes(search.toLowerCase()) ||
+      k.electricianCode.toLowerCase().includes(search.toLowerCase()) ||
+      (k.phone && k.phone.includes(search));
     const matchStatus = filterStatus === 'all' || k.kycStatus === filterStatus;
     return matchSearch && matchStatus;
+  });
+
+  // Sort: pending first (new requests), then rejected, not_submitted, verified last
+  const STATUS_ORDER: Record<string, number> = { pending: 0, rejected: 1, not_submitted: 2, verified: 3 };
+  const sorted = [...filtered].sort((a, b) => {
+    const diff = (STATUS_ORDER[a.kycStatus] ?? 2) - (STATUS_ORDER[b.kycStatus] ?? 2);
+    if (diff !== 0) return diff;
+    return new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime();
   });
 
   const handleVerify = (doc: ElectricianKYCItem) => {
@@ -250,7 +273,7 @@ export default function ElectricianKYC() {
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Electrician KYC" fileName="electrician-kyc" getData={() => documents.map(d => ({ Name: d.name, Code: d.electricianCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '' }))} />
 
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search electrician..." style={{ ...inputStyle, flex: 1, minWidth: 220 }} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, code or phone..." style={{ ...inputStyle, flex: 1, minWidth: 220 }} />
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
           <option value="all">All Status</option>
           <option value="verified">Verified</option>
@@ -274,7 +297,7 @@ export default function ElectricianKYC() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No electricians found</td></tr>
-              ) : filtered.map(doc => {
+              ) : sorted.map(doc => {
                 const status = statusConfig[doc.kycStatus] ?? statusConfig['not_submitted'];
                 return (
                   <tr key={doc.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>

@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { FileCheck, Eye, Check, X, Upload, ImageIcon, Pencil, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
@@ -143,6 +143,16 @@ export default function KYCManagement() {
   useEffect(() => {
     dealerApi.getAll({ limit: '500' }).then(res => {
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
+
+      // Normalize any LAN IP in image URLs to localhost for admin browser
+      const normalizeUrl = (url?: string) => {
+        if (!url) return url;
+        return url.replace(
+          /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
+          (_, _ip, port) => `http://localhost${port || ''}`
+        );
+      };
+
       setDocuments(data.map((d: any) => ({
         id: d.id,
         dealerName: d.name,
@@ -151,10 +161,10 @@ export default function KYCManagement() {
         aadharNumber: d.aadharNumber,
         panNumber: d.panNumber,
         gstNumber: d.gstNumber,
-        aadharFrontImage: d.aadharFrontImage,
-        aadharBackImage: d.aadharBackImage,
-        panDocument: d.panDocument,
-        gstDocument: d.gstDocument,
+        aadharFrontImage: normalizeUrl(d.aadharFrontImage),
+        aadharBackImage: normalizeUrl(d.aadharBackImage),
+        panDocument: normalizeUrl(d.panDocument),
+        gstDocument: normalizeUrl(d.gstDocument),
         kycRejectionReason: d.kycRejectionReason,
         joinedDate: d.joinedDate,
       })));
@@ -162,6 +172,15 @@ export default function KYCManagement() {
   }, []);
 
   const filtered = documents.filter(d => filterStatus === 'all' || d.kycStatus === filterStatus);
+
+  // Sort: pending first (new requests), then rejected, not_submitted, verified last
+  const STATUS_ORDER: Record<string, number> = { pending: 0, rejected: 1, not_submitted: 2, verified: 3 };
+  const sorted = [...filtered].sort((a, b) => {
+    const diff = (STATUS_ORDER[a.kycStatus] ?? 2) - (STATUS_ORDER[b.kycStatus] ?? 2);
+    if (diff !== 0) return diff;
+    // Within same status, newest first
+    return new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime();
+  });
 
   const handleVerify = (doc: DealerKYC) => {
     setConfirmState({
@@ -290,7 +309,7 @@ export default function KYCManagement() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No dealers found</td></tr>
-              ) : filtered.map(doc => {
+              ) : sorted.map(doc => {
                 const status = statusConfig[doc.kycStatus] ?? statusConfig['not_submitted'];
                 return (
                   <tr key={doc.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>

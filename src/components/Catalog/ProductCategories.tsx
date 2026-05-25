@@ -86,12 +86,22 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
         setCategories(derived);
       } else {
         // Map backend categories to frontend format
+        // Normalize any LAN IP in image URLs to localhost so the admin browser can load them
+        const normalizeImageUrl = (url: string | null | undefined): string => {
+          if (!url) return '';
+          // Replace any private LAN IP (10.x.x.x, 192.168.x.x, 172.x.x.x) with localhost
+          return url.replace(
+            /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
+            (_, _ip, port) => `http://localhost${port || ''}`
+          );
+        };
+
         const mapped: Category[] = categories.map((c: any, i: number) => ({
           id: c.id || i + 1,
           name: c.label || c.name || 'Unnamed',
           slug: c.slug || toSlug(c.label || c.name || ''),
           description: c.description || '',
-          image: c.imageUrl || c.image || '',
+          image: normalizeImageUrl(c.imageUrl || c.image || ''),
           productCount: c.productCount || 0,
           isActive: c.isActive ?? true,
           sortOrder: c.sortOrder ?? i + 1,

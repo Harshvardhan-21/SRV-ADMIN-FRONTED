@@ -7,26 +7,46 @@ import { settingsApi } from '@/lib/api';
 
 const DEFAULT_CONTENT = `Privacy Policy - SRV Electricals
 
-Last Updated: January 15, 2025
+Last Updated: April 2026
 
-1. INTRODUCTION
-SRV Electricals is committed to protecting your personal information and your right to privacy.
+Your data stays protected with SRV
 
-2. INFORMATION WE COLLECT
-- Personal identification information (name, phone number, email address)
-- Professional information (electrician license, dealer code)
-- Identity documents (Aadhaar, PAN)
-- Bank account details for reward redemptions
+We keep this policy simple so dealers and electricians can quickly understand what we collect, why we use it, and how you stay in control.
 
-3. HOW WE USE YOUR INFORMATION
-- Create and manage your account
-- Process reward points and redemptions
-- Send notifications about offers and updates
-- Prevent fraud and ensure platform security
+- Clear use of data
+- Policy updates shared
 
-4. CONTACT US
-Email: privacy@srvelectricals.in
-Phone: +91 88376 84004`;
+1. Information Collection
+We collect personal information such as your name, phone number, email address, and business details when you register for an account. We also collect usage data including scan history, reward points, and app interactions.
+
+2. Use of Information
+Your information is used to provide and improve our services, process reward point transactions, communicate with you about your account, and send promotional notifications with your consent.
+
+3. Data Security
+We implement appropriate security measures to protect your personal information from unauthorized access, alteration, disclosure, or destruction.
+
+4. Information Sharing
+We do not sell your personal information. We may share data with connected dealers (for electrician accounts) and service providers who assist in operating our app, subject to confidentiality agreements.
+
+5. User Rights
+You have the right to access, update, or delete your personal information at any time through the app settings or by contacting our support team.
+
+6. Cookies & Tracking
+We use cookies and similar tracking technologies to maintain app functionality and analyze usage patterns. You can manage cookie preferences in your device settings.
+
+7. Third-Party Links
+Our app may contain links to third-party websites. We are not responsible for the privacy practices of these external sites.
+
+8. Children's Privacy
+Our services are not intended for users under 18 years of age. We do not knowingly collect information from minors.
+
+9. Policy Changes
+We may update this Privacy Policy periodically. We will notify you of significant changes through app notifications or emails.
+
+10. Contact Us
+For privacy-related queries, contact us at:
+Email: info@srvelectricals.com
+Phone: +91 8837684004`;
 
 export default function PrivacyPolicy({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
