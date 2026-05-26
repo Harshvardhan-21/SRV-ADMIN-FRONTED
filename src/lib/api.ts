@@ -190,8 +190,11 @@ export const dealerApi = {
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/dealers/${id}`, { method: 'DELETE' }),
-  updateStatus: (id: string, status: string) =>
-    request<any>(`/dealers/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateStatus: (id: string, status: string, rejectionReason?: string) =>
+    request<any>(`/dealers/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, rejectionReason }),
+    }),
   importMany: (records: any[]) =>
     request<{ created: number; updated: number; failed: number; errors: string[]; total: number }>(
       '/dealers/import', { method: 'POST', body: JSON.stringify({ records }) }
