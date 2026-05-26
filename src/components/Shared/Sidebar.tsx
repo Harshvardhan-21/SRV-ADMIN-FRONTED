@@ -7,7 +7,7 @@ import {
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageSquare, FileText,
-  UserCheck, ClipboardList, Shield, Smartphone, Play, AppWindow,
+  UserCheck, Shield, Smartphone, Play, AppWindow, Activity,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -15,6 +15,7 @@ const NAV_GROUPS = [
     label: 'Overview',
     items: [
       { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+      { id: 'pro-active-inactive', label: 'Pro / Active / Inactive', Icon: Activity },
     ]
   },
   {

@@ -734,12 +734,28 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       {/* Table */}
       {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading electricians...</div>}
-      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1120 }}>
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-              {['Electrician','Electrician Code','Location','Tier','Points','Scans','Wallet','Status','Last Active','Actions'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 14px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','Last Active','Actions'].map(h => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    whiteSpace: 'nowrap',
+                    width: h === 'Actions' ? 190 : undefined,
+                    minWidth: h === 'Actions' ? 190 : undefined,
+                  }}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -758,13 +774,11 @@ export default function Electricians({ role }: ElectriciansProps) {
                       </div>
                       <div>
                         <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{e.name}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>{e.phone}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{e.electricianCode}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '13px 14px' }}>
-                    <span style={{ background: C.surface, color: C.muted, fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap' }}>{e.electricianCode}</span>
-                  </td>
+                  <td style={{ padding: '13px 14px', fontSize: 12.5, color: C.muted, whiteSpace: 'nowrap' }}>{e.phone}</td>
                   <td style={{ padding: '13px 14px', fontSize: 12.5, color: C.muted, whiteSpace: 'nowrap' }}>{e.city}, {e.state}</td>
                   <td style={{ padding: '13px 14px' }}>
                     <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>{tier.icon} {e.tier}</span>
@@ -776,17 +790,17 @@ export default function Electricians({ role }: ElectriciansProps) {
                     <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span>
                   </td>
                   <td style={{ padding: '13px 14px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{e.recentActivity}</td>
-                  <td style={{ padding: '13px 14px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                  <td style={{ padding: '13px 14px', minWidth: 190, width: 190 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>View</button>
                       {permissions.canEdit && (
-                        <button onClick={() => setEditing(e)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                        <button onClick={() => setEditing(e)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>Edit</button>
                       )}
                       {permissions.canDelete && (
-                        <button onClick={() => handleDelete(e.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>
+                        <button onClick={() => handleDelete(e.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, minHeight: 30 }}><Trash2 size={13} /></button>
                       )}
                       {!permissions.canEdit && !permissions.canDelete && (
-                        <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px' }}>Read Only</span>
+                        <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px', whiteSpace: 'nowrap' }}>Read Only</span>
                       )}
                     </div>
                   </td>

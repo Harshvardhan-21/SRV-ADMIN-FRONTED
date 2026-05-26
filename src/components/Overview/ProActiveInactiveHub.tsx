@@ -1,0 +1,674 @@
+'use client';
+
+import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  Activity,
+  CalendarClock,
+  RefreshCcw,
+  Sparkles,
+  Store,
+  TrendingUp,
+  UserCheck,
+  Users,
+  Zap,
+} from 'lucide-react';
+
+import { appUserApi, counterboyApi, dealerApi, electricianApi } from '@/lib/api';
+import { useThemePalette } from '@/lib/theme';
+
+type RoleTab = 'electrician' | 'dealer' | 'counterboy' | 'customer';
+type ActivityTab = 'proactive' | 'active' | 'inactive';
+
+type ActivityRow = Record<string, unknown>;
+
+interface ActivityCardData {
+  id: string;
+  name: string;
+  code: string;
+  phone: string;
+  location: string;
+  status: string;
+  lastSeen: string;
+  reason: string;
+  metrics: string[];
+  score: number;
+}
+
+interface ActivityBuckets {
+  proactive: ActivityCardData[];
+  active: ActivityCardData[];
+  inactive: ActivityCardData[];
+}
+
+const ROLE_TABS: Array<{
+  id: RoleTab;
+  label: string;
+  Icon: typeof Zap;
+  accent: string;
+  hint: string;
+}> = [
+  { id: 'electrician', label: 'Electrician', Icon: Zap, accent: '#2563EB', hint: 'Scans, points, wallet and recent activity' },
+  { id: 'dealer', label: 'Dealer', Icon: Store, accent: '#DC2626', hint: 'Recent access and electrician growth' },
+  { id: 'counterboy', label: 'Counter Boy', Icon: UserCheck, accent: '#7C3AED', hint: 'Scans, points and wallet engagement' },
+  { id: 'customer', label: 'Customer', Icon: Users, accent: '#0F766E', hint: 'Reward usage and account engagement' },
+];
+
+const ACTIVITY_TABS: Array<{
+  id: ActivityTab;
+  label: string;
+  Icon: typeof Sparkles;
+  description: string;
+}> = [
+  { id: 'proactive', label: 'Proactive', Icon: Sparkles, description: 'Strong recent usage and meaningful engagement signals' },
+  { id: 'active', label: 'Active', Icon: Activity, description: 'Some recent usage or ongoing app activity' },
+  { id: 'inactive', label: 'Inactive', Icon: CalendarClock, description: 'Low or missing recent engagement signals' },
+];
+
+const formatNumber = new Intl.NumberFormat('en-IN');
+
+const emptyBuckets = (): ActivityBuckets => ({
+  proactive: [],
+  active: [],
+  inactive: [],
+});
+
+function getString(row: ActivityRow, key: string): string {
+  const value = row[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getNumber(row: ActivityRow, key: string): number {
+  const value = row[key];
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function parseDateValue(value: unknown): Date | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getActivityDate(row: ActivityRow): Date | null {
+  const candidates = [
+    row.lastLoginAt,
+    row.lastLogin,
+    row.lastActivityAt,
+    row.updatedAt,
+    row.recentActivity,
+    row.joinedDate,
+  ];
+
+  for (const value of candidates) {
+    const parsed = parseDateValue(value);
+    if (parsed) return parsed;
+  }
+
+  return null;
+}
+
+function getDaysSince(date: Date | null): number | null {
+  if (!date) return null;
+  const diff = Date.now() - date.getTime();
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
+function formatLastSeen(row: ActivityRow): string {
+  const recentActivity = getString(row, 'recentActivity');
+  if (recentActivity && Number.isNaN(new Date(recentActivity).getTime())) return recentActivity;
+
+  const date = getActivityDate(row);
+  if (!date) return 'No recent activity found';
+
+  const days = getDaysSince(date);
+  if (days === null) return date.toLocaleDateString('en-IN');
+  if (days === 0) return 'Today';
+  if (days === 1) return '1 day ago';
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function getLocation(row: ActivityRow, role: RoleTab): string {
+  const parts = [
+    getString(row, role === 'dealer' ? 'town' : 'city'),
+    getString(row, 'district'),
+    getString(row, 'state'),
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(', ') : 'Location not available';
+}
+
+function getDisplayName(row: ActivityRow, role: RoleTab): string {
+  if (role === 'dealer') {
+    return getString(row, 'name') || getString(row, 'contactPerson') || 'Dealer';
+  }
+  return getString(row, 'name') || 'Member';
+}
+
+function getCode(row: ActivityRow, role: RoleTab): string {
+  switch (role) {
+    case 'electrician':
+      return getString(row, 'electricianCode');
+    case 'dealer':
+      return getString(row, 'dealerCode');
+    case 'counterboy':
+      return getString(row, 'counterboyCode');
+    default:
+      return getString(row, 'userCode');
+  }
+}
+
+function getMetrics(row: ActivityRow, role: RoleTab): string[] {
+  const totalScans = getNumber(row, 'totalScans');
+  const totalPoints = getNumber(row, 'totalPoints');
+  const walletBalance = getNumber(row, 'walletBalance');
+  const totalRedemptions = getNumber(row, 'totalRedemptions');
+  const electricianCount = getNumber(row, 'electricianCount');
+  const totalOrders = getNumber(row, 'totalOrders');
+
+  switch (role) {
+    case 'electrician':
+      return [
+        `Scans ${formatNumber.format(totalScans)}`,
+        `Points ${formatNumber.format(totalPoints)}`,
+        `Redeems ${formatNumber.format(totalRedemptions)}`,
+        `Wallet Rs ${formatNumber.format(walletBalance)}`,
+      ];
+    case 'dealer':
+      return [
+        `Electricians ${formatNumber.format(electricianCount)}`,
+        `Orders ${formatNumber.format(totalOrders)}`,
+        `Wallet Rs ${formatNumber.format(walletBalance)}`,
+        `Status ${getString(row, 'status') || 'N/A'}`,
+      ];
+    case 'counterboy':
+      return [
+        `Scans ${formatNumber.format(totalScans)}`,
+        `Points ${formatNumber.format(totalPoints)}`,
+        `Redeems ${formatNumber.format(totalRedemptions)}`,
+        `Wallet Rs ${formatNumber.format(walletBalance)}`,
+      ];
+    default:
+      return [
+        `Points ${formatNumber.format(totalPoints)}`,
+        `Redeems ${formatNumber.format(totalRedemptions)}`,
+        `Wallet Rs ${formatNumber.format(walletBalance)}`,
+        `Status ${getString(row, 'status') || 'N/A'}`,
+      ];
+  }
+}
+
+function classifyRow(row: ActivityRow, role: RoleTab): { bucket: ActivityTab; reason: string; score: number } {
+  const status = getString(row, 'status').toLowerCase();
+  const totalScans = getNumber(row, 'totalScans');
+  const totalPoints = getNumber(row, 'totalPoints');
+  const walletBalance = getNumber(row, 'walletBalance');
+  const totalRedemptions = getNumber(row, 'totalRedemptions');
+  const electricianCount = getNumber(row, 'electricianCount');
+  const totalOrders = getNumber(row, 'totalOrders');
+  const achievedTarget = getNumber(row, 'achievedTarget');
+  const recentActivity = getString(row, 'recentActivity').toLowerCase();
+
+  const activityDate = getActivityDate(row);
+  const daysSince = getDaysSince(activityDate);
+  const veryRecent = daysSince !== null ? daysSince <= 7 : /today|hour|minute|just|recent/.test(recentActivity);
+  const recentlyActive = daysSince !== null ? daysSince <= 30 : /day|week|recent|active/.test(recentActivity);
+
+  if (status === 'inactive' || status === 'suspended') {
+    return {
+      bucket: 'inactive',
+      reason: 'Account status is already marked inactive or suspended.',
+      score: 0,
+    };
+  }
+
+  if (role === 'electrician') {
+    const score = totalScans * 5 + totalPoints + totalRedemptions * 150 + walletBalance;
+    if (veryRecent && (totalScans >= 10 || totalPoints >= 500 || totalRedemptions >= 1 || walletBalance >= 500)) {
+      return { bucket: 'proactive', reason: 'Recently active with strong scan, reward, or wallet momentum.', score };
+    }
+    if (recentlyActive || totalScans > 0 || totalPoints > 0 || totalRedemptions > 0) {
+      return { bucket: 'active', reason: 'Showing app usage or reward activity, but below the proactive threshold.', score };
+    }
+    return { bucket: 'inactive', reason: 'No meaningful recent scan or reward activity detected.', score };
+  }
+
+  if (role === 'dealer') {
+    const score = electricianCount * 200 + totalOrders * 100 + achievedTarget + walletBalance;
+    if (veryRecent && (electricianCount >= 5 || totalOrders >= 3 || achievedTarget > 0)) {
+      return { bucket: 'proactive', reason: 'Dealer is recently engaged and actively growing electrician or order activity.', score };
+    }
+    if (recentlyActive || electricianCount > 0 || totalOrders > 0 || achievedTarget > 0) {
+      return { bucket: 'active', reason: 'Dealer has some recent usage or network activity.', score };
+    }
+    return { bucket: 'inactive', reason: 'Dealer shows low recent access and limited growth activity.', score };
+  }
+
+  if (role === 'counterboy') {
+    const score = totalScans * 6 + totalPoints + totalRedemptions * 150 + walletBalance;
+    if (veryRecent && (totalScans >= 5 || totalPoints >= 200 || walletBalance >= 250 || totalRedemptions >= 1)) {
+      return { bucket: 'proactive', reason: 'Counter boy is recently engaged with strong scan or wallet usage.', score };
+    }
+    if (recentlyActive || totalScans > 0 || totalPoints > 0 || totalRedemptions > 0) {
+      return { bucket: 'active', reason: 'Counter boy has moderate recent activity or reward usage.', score };
+    }
+    return { bucket: 'inactive', reason: 'Counter boy has little or no recent usage signals.', score };
+  }
+
+  const score = totalPoints + totalRedemptions * 150 + walletBalance;
+  if (veryRecent && (totalPoints >= 200 || totalRedemptions >= 1 || walletBalance >= 250)) {
+    return { bucket: 'proactive', reason: 'Customer is recently engaged with strong points, redemption, or wallet movement.', score };
+  }
+  if (recentlyActive || totalPoints > 0 || totalRedemptions > 0 || walletBalance > 0) {
+    return { bucket: 'active', reason: 'Customer has some visible engagement signals in the app.', score };
+  }
+  return { bucket: 'inactive', reason: 'Customer has low or missing recent engagement signals.', score };
+}
+
+function buildBuckets(rows: ActivityRow[], role: RoleTab): ActivityBuckets {
+  const buckets = emptyBuckets();
+
+  rows.forEach((row, index) => {
+    const classification = classifyRow(row, role);
+    buckets[classification.bucket].push({
+      id: getString(row, 'id') || `${role}-${index}`,
+      name: getDisplayName(row, role),
+      code: getCode(row, role) || 'Code unavailable',
+      phone: getString(row, 'phone') || 'Phone unavailable',
+      location: getLocation(row, role),
+      status: getString(row, 'status') || 'pending',
+      lastSeen: formatLastSeen(row),
+      reason: classification.reason,
+      metrics: getMetrics(row, role),
+      score: classification.score,
+    });
+  });
+
+  (Object.keys(buckets) as ActivityTab[]).forEach((bucket) => {
+    buckets[bucket].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  });
+
+  return buckets;
+}
+
+export default function ProActiveInactiveHub() {
+  const C = useThemePalette();
+  const [activeRole, setActiveRole] = useState<RoleTab>('electrician');
+  const [activeBucket, setActiveBucket] = useState<ActivityTab>('proactive');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [datasets, setDatasets] = useState<Record<RoleTab, ActivityBuckets>>({
+    electrician: emptyBuckets(),
+    dealer: emptyBuckets(),
+    counterboy: emptyBuckets(),
+    customer: emptyBuckets(),
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const [electricians, dealers, counterboys, customers] = await Promise.all([
+          electricianApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
+          dealerApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
+          counterboyApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
+          appUserApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
+        ]);
+
+        if (!mounted) return;
+
+        setDatasets({
+          electrician: buildBuckets(Array.isArray(electricians.data) ? electricians.data : [], 'electrician'),
+          dealer: buildBuckets(Array.isArray(dealers.data) ? dealers.data : [], 'dealer'),
+          counterboy: buildBuckets(Array.isArray(counterboys.data) ? counterboys.data : [], 'counterboy'),
+          customer: buildBuckets(Array.isArray(customers.data) ? customers.data : [], 'customer'),
+        });
+      } catch (loadError) {
+        if (!mounted) return;
+        setError(loadError instanceof Error ? loadError.message : 'Could not load activity data.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const roleMeta = ROLE_TABS.find((tab) => tab.id === activeRole) ?? ROLE_TABS[0];
+  const RoleMetaIcon = roleMeta.Icon;
+  const activeData = datasets[activeRole];
+  const bucketRows = activeData[activeBucket];
+  const totalForRole = activeData.proactive.length + activeData.active.length + activeData.inactive.length;
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg, overflowX: 'hidden' }}>
+      <div style={{ padding: '28px 32px 18px' }}>
+        <div
+          style={{
+            background: `linear-gradient(135deg, ${roleMeta.accent}, ${roleMeta.accent}cc)`,
+            borderRadius: 24,
+            padding: '24px 28px',
+            color: 'white',
+            boxShadow: '0 18px 40px rgba(15,23,42,0.14)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: 'rgba(255,255,255,0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>Pro / Active / Inactive</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>Track engagement quality across all main app roles from one place.</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.9 }}>
+            Classification uses the activity fields currently available in the admin data such as recent activity, joined date, scans, points, wallet movement, redemptions, and dealer network growth.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: C.subNavBg, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 40, boxShadow: C.shadow }}>
+        <div
+          style={{
+            padding: '0 32px',
+            display: 'flex',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          } as CSSProperties}
+        >
+          {ROLE_TABS.map((tab) => {
+            const isActive = tab.id === activeRole;
+            const TabIcon = tab.Icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveRole(tab.id);
+                  setActiveBucket('proactive');
+                }}
+                style={{
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: isActive ? `3px solid ${tab.accent}` : '3px solid transparent',
+                  color: isActive ? tab.accent : C.muted,
+                  fontWeight: isActive ? 700 : 600,
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <TabIcon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ padding: '22px 32px 32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 16, marginBottom: 22 }}>
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 20,
+              padding: 20,
+              boxShadow: C.shadow,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div
+                  style={{
+                    width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  background: `${roleMeta.accent}18`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: roleMeta.accent,
+                  }}
+                >
+                  <RoleMetaIcon size={20} />
+                </div>
+                <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{roleMeta.label} Activity View</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{roleMeta.hint}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: C.muted }}>
+              <span>Total records: <strong style={{ color: C.text }}>{formatNumber.format(totalForRole)}</strong></span>
+              <span>Current bucket: <strong style={{ color: roleMeta.accent }}>{ACTIVITY_TABS.find((tab) => tab.id === activeBucket)?.label}</strong></span>
+            </div>
+          </div>
+
+          {ACTIVITY_TABS.map((tab) => {
+            const isActive = tab.id === activeBucket;
+            const TabIcon = tab.Icon;
+            const count = activeData[tab.id].length;
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveBucket(tab.id)}
+                style={{
+                  background: isActive ? `${roleMeta.accent}12` : C.card,
+                  border: `1px solid ${isActive ? roleMeta.accent : C.border}`,
+                  borderRadius: 20,
+                  padding: 18,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  boxShadow: C.shadow,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      background: isActive ? `${roleMeta.accent}1e` : C.bg,
+                      color: isActive ? roleMeta.accent : C.muted,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <TabIcon size={18} />
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: isActive ? roleMeta.accent : C.text }}>{formatNumber.format(count)}</div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>{tab.label}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>{tab.description}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {loading ? (
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 24,
+              padding: '42px 28px',
+              textAlign: 'center',
+              color: C.muted,
+              boxShadow: C.shadow,
+            }}
+          >
+            <RefreshCcw size={22} style={{ marginBottom: 12, animation: 'spin 1s linear infinite' }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>Loading activity insights</div>
+            <div style={{ fontSize: 12 }}>Fetching role data and building the engagement buckets.</div>
+          </div>
+        ) : error ? (
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 24,
+              padding: '32px 28px',
+              textAlign: 'center',
+              color: C.muted,
+              boxShadow: C.shadow,
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Could not load this overview</div>
+            <div style={{ fontSize: 13 }}>{error}</div>
+          </div>
+        ) : bucketRows.length === 0 ? (
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 24,
+              padding: '36px 28px',
+              textAlign: 'center',
+              color: C.muted,
+              boxShadow: C.shadow,
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>No records found in this bucket</div>
+            <div style={{ fontSize: 13 }}>
+              Try another role or switch to a different activity status tab.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
+            {bucketRows.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  background: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 22,
+                  padding: 20,
+                  boxShadow: C.shadow,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 15,
+                        background: `${roleMeta.accent}15`,
+                        color: roleMeta.accent,
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {item.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 4 }}>{item.name}</div>
+                      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 2 }}>{item.code}</div>
+                      <div style={{ fontSize: 12.5, color: C.muted }}>{item.phone}</div>
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      background: `${roleMeta.accent}12`,
+                      color: roleMeta.accent,
+                      borderRadius: 999,
+                      padding: '6px 10px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: 'capitalize',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
+                    <CalendarClock size={14} />
+                    Last signal: <strong style={{ color: C.text }}>{item.lastSeen}</strong>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
+                    <Users size={14} />
+                    {item.location}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                  {item.metrics.map((metric) => (
+                    <span
+                      key={metric}
+                      style={{
+                        background: C.bg,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 999,
+                        padding: '7px 10px',
+                        fontSize: 11.5,
+                        color: C.text,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {metric}
+                    </span>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 16,
+                    padding: 14,
+                    fontSize: 12.5,
+                    color: C.muted,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {item.reason}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}

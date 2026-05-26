@@ -158,7 +158,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
   return (
     <div style={{ minHeight: '100vh', background: C.bg, padding: 24 }}>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #EA580C, #C2410C)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ background: 'linear-gradient(135deg, #1D4ED8, #2563EB)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Image size={24} color="#fff" />
@@ -328,7 +328,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
             </div>
             <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowModal(false)} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #EA580C, #C2410C)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={handleSave} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #1D4ED8, #2563EB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 {editingId !== null ? 'Save Changes' : 'Add Banner'}
               </button>
             </div>

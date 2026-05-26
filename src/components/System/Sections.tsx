@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerApi, analyticsApi, productApi } from '@/lib/api';
 import type { PointsConfig, BannerItem } from '@/lib/types';
-import { useThemePalette } from '@/lib/theme';
+import { useTheme, useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 function useSectionStyles() {
   const C = useThemePalette();
+  const { mode } = useTheme();
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`,
     borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface,
@@ -15,7 +16,7 @@ function useSectionStyles() {
   const labelStyle: React.CSSProperties = {
     fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em',
   };
-  return { C, inputStyle, labelStyle };
+  return { C, inputStyle, labelStyle, mode };
 }
 
 const numberInputValue = (value: number | string | undefined) => value === 0 || value === '' || value == null ? '' : value;
@@ -717,7 +718,7 @@ export function AppBanners() {
 
 /* ============ REPORTS ============ */
 export function Reports() {
-  const { C } = useSectionStyles();
+  const { C, mode } = useSectionStyles();
   const [period, setPeriod] = useState('monthly');
   const [chartType, setChartType] = useState('bar');
   const [selectedMetric, setSelectedMetric] = useState('scans');
@@ -896,6 +897,16 @@ export function Reports() {
   };
   
   const maxValue = Math.max(...(comparison ? [...comparisonData.current, ...comparisonData.previous] : comparisonData.current));
+  const isDark = mode === 'dark';
+  const accentBg = isDark ? C.accentSoft : '#FFF0F0';
+  const successBg = isDark ? 'rgba(16,185,129,0.16)' : '#D1FAE5';
+  const successText = isDark ? '#6EE7B7' : '#065F46';
+  const dangerBg = isDark ? C.dangerBg : '#FEE2E2';
+  const dangerText = isDark ? C.dangerText : '#991B1B';
+  const neutralBg = isDark ? 'rgba(148,163,184,0.16)' : '#F1F5F9';
+  const neutralText = isDark ? '#CBD5E1' : '#475569';
+  const warningBg = isDark ? 'rgba(245,158,11,0.16)' : '#FFFBEB';
+  const warningText = isDark ? '#FCD34D' : '#92400E';
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1600 }}>
@@ -904,11 +915,11 @@ export function Reports() {
       {loading && <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>Loading analytics data...</div>}
       {/* Export Confirmation Dialog */}
       {showExportDialog && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowExportDialog(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowExportDialog(false)}>
           <div style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: successBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
                   {exportFormat === 'excel' ? '📊' : exportFormat === 'pdf' ? '📄' : '📸'}
                 </div>
                 <div>
@@ -918,7 +929,7 @@ export function Reports() {
               </div>
             </div>
             <div style={{ padding: '24px 28px' }}>
-              <div style={{ background: C.bg, borderRadius: 12, padding: '16px', marginBottom: 20 }}>
+              <div style={{ background: C.bg, borderRadius: 12, padding: '16px', marginBottom: 20, border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 13, color: C.text, marginBottom: 12 }}>
                   <strong>Export Details:</strong>
                 </div>
@@ -933,7 +944,7 @@ export function Reports() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setShowExportDialog(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => setShowExportDialog(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   Cancel
                 </button>
                 <button onClick={handleExport} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.3)' }}>
@@ -953,7 +964,7 @@ export function Reports() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {['weekly','monthly','quarterly','yearly'].map(p => (
-              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${period === p ? C.red : C.border}`, background: period === p ? '#FFF0F0' : C.card, color: period === p ? C.red : C.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>{p}</button>
+              <button key={p} onClick={() => setPeriod(p)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${period === p ? C.red : C.border}`, background: period === p ? accentBg : C.card, color: period === p ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>{p}</button>
             ))}
           </div>
           <button onClick={() => handleExportClick('pdf')} disabled={exporting} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.5 : 1 }}>
@@ -967,12 +978,12 @@ export function Reports() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 28 }}>
         {metrics.map((m, i) => (
-          <div key={i} onClick={() => setSelectedMetric(m.key)} style={{ background: selectedMetric === m.key ? '#FFF0F0' : C.card, borderRadius: 16, padding: '18px 20px', border: `2px solid ${selectedMetric === m.key ? C.red : C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', transition: 'all 0.2s' }}
+          <div key={i} onClick={() => setSelectedMetric(m.key)} style={{ background: selectedMetric === m.key ? accentBg : C.card, borderRadius: 16, padding: '18px 20px', border: `2px solid ${selectedMetric === m.key ? C.red : C.border}`, boxShadow: C.shadow, cursor: 'pointer', transition: 'all 0.2s' }}
             onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'}
             onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: selectedMetric === m.key ? C.red + '20' : C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{m.icon}</div>
-              <span style={{ background: m.up ? '#D1FAE5' : '#FEE2E2', color: m.up ? '#065F46' : '#991B1B', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{m.change}</span>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: selectedMetric === m.key ? C.accentSoft : C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{m.icon}</div>
+              <span style={{ background: m.up ? successBg : dangerBg, color: m.up ? successText : dangerText, fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{m.change}</span>
             </div>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.text }}>{m.value}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 4, fontWeight: 600 }}>{m.label}</div>
@@ -981,7 +992,7 @@ export function Reports() {
       </div>
 
       {/* Chart Controls */}
-      <div style={{ background: C.card, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.border}`, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ background: C.card, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.border}`, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, boxShadow: C.shadow }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 8 }}>📊 Chart Visualization</div>
           <div style={{ fontSize: 13, color: C.muted }}>Select chart type and enable comparison mode</div>
@@ -994,19 +1005,19 @@ export function Reports() {
               { type: 'area', icon: '🏔️', label: 'Area' },
               { type: 'pie', icon: '🥧', label: 'Pie' },
             ].map(ct => (
-              <button key={ct.type} onClick={() => setChartType(ct.type)} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${chartType === ct.type ? C.red : C.border}`, background: chartType === ct.type ? '#FFF0F0' : C.surface, color: chartType === ct.type ? C.red : C.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button key={ct.type} onClick={() => setChartType(ct.type)} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${chartType === ct.type ? C.red : C.border}`, background: chartType === ct.type ? accentBg : C.surface, color: chartType === ct.type ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>{ct.icon}</span> {ct.label}
               </button>
             ))}
           </div>
-          <button onClick={() => setComparison(!comparison)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${comparison ? C.red : C.border}`, background: comparison ? '#FFF0F0' : C.surface, color: comparison ? C.red : C.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setComparison(!comparison)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${comparison ? C.red : C.border}`, background: comparison ? accentBg : C.surface, color: comparison ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             {comparison ? '✅' : '⬜'} Compare with Previous
           </button>
         </div>
       </div>
 
       {/* Main Chart */}
-      <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 20, boxShadow: C.shadow }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 20 }}>
           {metrics.find(m => m.key === selectedMetric)?.icon} {metrics.find(m => m.key === selectedMetric)?.label} - {period.charAt(0).toUpperCase() + period.slice(1)} Trend
         </div>
@@ -1064,7 +1075,7 @@ export function Reports() {
                           y1={`${100 - ((comparisonData.previous[i-1] / maxValue) * 100)}%`}
                           x2="67%" 
                           y2={`${100 - prevHeight}%`}
-                          stroke="#94A3B8" 
+                          stroke={neutralText} 
                           strokeWidth="2" 
                           strokeDasharray="4" 
                         />
@@ -1074,7 +1085,7 @@ export function Reports() {
                   
                   <div style={{ display: 'flex', flexDirection: 'column-reverse', gap: 4, flex: 1, position: 'relative', zIndex: 1 }}>
                     {comparison && chartType === 'bar' && (
-                      <div style={{ width: '45%', height: `${prevHeight}%`, background: '#94A3B8', borderRadius: 4, minHeight: 4, position: 'absolute', left: 0, bottom: 0 }} />
+                      <div style={{ width: '45%', height: `${prevHeight}%`, background: neutralText, borderRadius: 4, minHeight: 4, position: 'absolute', left: 0, bottom: 0 }} />
                     )}
                     {chartType === 'bar' && (
                       <div style={{ width: comparison ? '45%' : '100%', height: `${currentHeight}%`, background: C.red, borderRadius: 4, minHeight: 4, marginLeft: comparison ? 'auto' : 0 }} />
@@ -1083,7 +1094,7 @@ export function Reports() {
                       <>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.red, position: 'absolute', bottom: `${currentHeight}%`, left: '50%', transform: 'translate(-50%, 50%)', border: `2px solid ${C.card}` }} />
                         {comparison && (
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#94A3B8', position: 'absolute', bottom: `${prevHeight}%`, left: '50%', transform: 'translate(-50%, 50%)', border: `2px solid ${C.card}` }} />
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: neutralText, position: 'absolute', bottom: `${prevHeight}%`, left: '50%', transform: 'translate(-50%, 50%)', border: `2px solid ${C.card}` }} />
                         )}
                       </>
                     )}
@@ -1102,7 +1113,7 @@ export function Reports() {
               <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Current Period</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: '#94A3B8' }} />
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: neutralText }} />
               <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Previous Period</span>
             </div>
           </div>
@@ -1111,14 +1122,14 @@ export function Reports() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Top products */}
-        <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🏆 Top Scanned Products</div>
             <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>📸 Export</button>
           </div>
           {topProducts.map((p, i) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div style={{ width: 26, height: 26, borderRadius: 8, background: i === 0 ? '#FFFBEB' : i === 1 ? '#F1F5F9' : '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: i === 0 ? '#92400E' : i === 1 ? '#475569' : '#5B21B6', flexShrink: 0 }}>#{i + 1}</div>
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: i === 0 ? warningBg : i === 1 ? neutralBg : C.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: i === 0 ? warningText : i === 1 ? neutralText : C.accentText, flexShrink: 0 }}>#{i + 1}</div>
               <img src={p.image} alt={p.name} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, background: C.bg, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.name}</div>
@@ -1134,7 +1145,7 @@ export function Reports() {
         </div>
 
         {/* State breakdown */}
-        <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🗺️ State-wise Distribution</div>
             <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>📸 Export</button>

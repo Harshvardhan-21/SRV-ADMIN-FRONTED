@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Activity, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import Sidebar from '@/components/Shared/Sidebar';
 import Dashboard from '@/components/Overview/Dashboard';
+import ProActiveInactiveHub from '@/components/Overview/ProActiveInactiveHub';
 import ElectricianHub from '@/components/Electrician/ElectricianHub';
 import DealerHub from '@/components/Dealer/DealerHub';
 import Products from '@/components/Catalog/Products';
@@ -44,6 +45,7 @@ const ROLE_CONFIG: Record<AdminRole, { label: string; Icon: React.ElementType; c
 
 const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = {
   dashboard: { title: 'Dashboard', Icon: LayoutDashboard },
+  'pro-active-inactive': { title: 'Pro / Active / Inactive', Icon: Activity },
   electricians: { title: 'Electricians', Icon: Zap },
   dealers: { title: 'Dealers', Icon: Store },
   'app-users': { title: 'Customers', Icon: Users },
@@ -80,6 +82,8 @@ export default function Home() {
   const [active, setActive] = useState('dashboard');
   const [electricianSubPage, setElectricianSubPage] = useState<string | undefined>(undefined);
   const [dealerSubPage, setDealerSubPage] = useState<string | undefined>(undefined);
+  const [appUserSubPage, setAppUserSubPage] = useState<string | undefined>(undefined);
+  const [counterBoySubPage, setCounterBoySubPage] = useState<string | undefined>(undefined);
   const [productCategoryFilter, setProductCategoryFilter] = useState<string | undefined>(undefined);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -122,6 +126,16 @@ export default function Home() {
       setDealerSubPage(subPage);
     } else if (id === 'dealers') {
       setDealerSubPage(undefined);
+    }
+    if (id === 'app-users' && subPage) {
+      setAppUserSubPage(subPage);
+    } else if (id === 'app-users') {
+      setAppUserSubPage(undefined);
+    }
+    if (id === 'counterboys' && subPage) {
+      setCounterBoySubPage(subPage);
+    } else if (id === 'counterboys') {
+      setCounterBoySubPage(undefined);
     }
     setGlobalSearch('');
   };
@@ -287,10 +301,11 @@ export default function Home() {
   const renderPage = () => {
     switch (active) {
       case 'dashboard': return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
+      case 'pro-active-inactive': return <ProActiveInactiveHub />;
       case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => setElectricianSubPage(sp)} />;
       case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => setDealerSubPage(sp)} />;
-      case 'app-users': return <AppUserHub role={role} />;
-      case 'counterboys': return <CounterBoyHub role={role} />;
+      case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => setAppUserSubPage(sp)} />;
+      case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => setCounterBoySubPage(sp)} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;
       case 'product-categories': return <ProductCategories role={role} onNavigate={(page, category) => {
         if (page === 'products') {
@@ -977,3 +992,4 @@ export default function Home() {
     </div>
   );
 }
+

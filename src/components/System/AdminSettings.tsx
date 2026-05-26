@@ -57,6 +57,8 @@ export default function AdminSettings() {
   const [passwordChangeUser, setPasswordChangeUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   // Editable role permissions state - initialize from actual admin permissions
@@ -193,6 +195,8 @@ export default function AdminSettings() {
     setPasswordChangeUser(a);
     setNewPassword('');
     setConfirmNewPassword('');
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
     setPasswordError('');
     setPasswordSuccess(false);
     setShowPasswordModal(true);
@@ -362,25 +366,48 @@ export default function AdminSettings() {
               <div style={{ display: 'grid', gap: 14 }}>
                 <div>
                   <label style={lbl}>New Password *</label>
-                  <input 
-                    type="password" 
-                    style={inp} 
-                    value={newPassword} 
-                    onChange={e => setNewPassword(e.target.value)} 
-                    placeholder="Enter new password (min 8 characters)"
-                    disabled={saving || passwordSuccess}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showNewPassword ? 'text' : 'password'} 
+                      style={{ ...inp, paddingRight: 42 }} 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)} 
+                      placeholder="Enter new password (min 8 characters)"
+                      disabled={saving || passwordSuccess}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(p => !p)}
+                      disabled={saving || passwordSuccess}
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: saving || passwordSuccess ? 'not-allowed' : 'pointer', color: C.muted, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label style={lbl}>Confirm New Password *</label>
-                  <input 
-                    type="password" 
-                    style={inp} 
-                    value={confirmNewPassword} 
-                    onChange={e => setConfirmNewPassword(e.target.value)} 
-                    placeholder="Re-enter new password"
-                    disabled={saving || passwordSuccess}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showConfirmNewPassword ? 'text' : 'password'} 
+                      style={{ ...inp, paddingRight: 42, borderColor: confirmNewPassword && newPassword !== confirmNewPassword ? '#DC2626' : C.border }} 
+                      value={confirmNewPassword} 
+                      onChange={e => setConfirmNewPassword(e.target.value)} 
+                      placeholder="Re-enter new password"
+                      disabled={saving || passwordSuccess}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword(p => !p)}
+                      disabled={saving || passwordSuccess}
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: saving || passwordSuccess ? 'not-allowed' : 'pointer', color: C.muted, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      {showConfirmNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {confirmNewPassword && newPassword !== confirmNewPassword && (
+                    <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>Passwords do not match</div>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>

@@ -89,7 +89,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     { label: 'Total Dealers', value: stats?.totalDealers?.toLocaleString('en-IN') ?? '—', Icon: Store, change: 'All registered', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers' },
     { label: 'Scans Today', value: stats?.totalScansToday?.toLocaleString('en-IN') ?? '—', Icon: ScanLine, change: 'Today', up: true, color: '#10B981', bg: '#D1FAE5', navigateTo: 'electricians', subPage: 'scans' },
     { label: 'Points Awarded', value: stats?.totalPointsAwarded ? `${(stats.totalPointsAwarded / 1000).toFixed(0)}K` : '—', Icon: Star, change: 'Total all-time', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'points-config' },
-    { label: 'Finance', value: '💳', Icon: CreditCard, change: 'Electrician & Dealer', up: true, color: '#065F46', bg: '#D1FAE5', navigateTo: 'finance-choice' },
+    { label: 'Finance', value: '💳', Icon: CreditCard, change: 'Electrician, Dealer, Customer & Counter Boy', up: true, color: '#065F46', bg: '#D1FAE5', navigateTo: 'finance-choice' },
     { label: 'Active Users', value: stats?.activeUsers?.toLocaleString('en-IN') ?? '—', Icon: Users, change: 'Currently active', up: true, color: '#0369A1', bg: '#F0F9FF', navigateTo: 'electricians' },
     { label: 'Top Electricians', value: '🏆', Icon: Trophy, change: 'View leaderboard', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'electricians', subPage: 'top' },
     { label: 'Top Dealers', value: '🏅', Icon: Store, change: 'View leaderboard', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers', subPage: 'top' },
@@ -106,26 +106,31 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       {/* Finance Choice Modal */}
       {showFinanceChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowFinanceChoice(false)}>
-          <div style={{ background: C.card, borderRadius: 20, width: 440, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#065F46' }}><CreditCard size={18} /></div>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Finance</div>
-                  <div style={{ fontSize: 12, color: C.muted }}>Kiske finance pe jaana chahte hain?</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>Which finance page would you like to open?</div>
                 </div>
               </div>
               <button onClick={() => setShowFinanceChoice(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
             </div>
             <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {[{ label: 'Electrician', emoji: '⚡', nav: 'electricians' }, { label: 'Dealer', emoji: '🏬', nav: 'dealers' }].map(item => (
+              {[
+                { label: 'Electrician', emoji: '⚡', nav: 'electricians' },
+                { label: 'Dealer', emoji: '🏬', nav: 'dealers' },
+                { label: 'Customer', emoji: '👤', nav: 'app-users' },
+                { label: 'Counter Boy', emoji: '🧾', nav: 'counterboys' },
+              ].map(item => (
                 <button key={item.label} onClick={() => { setShowFinanceChoice(false); onNavigate && onNavigate(item.nav, 'finance'); }}
                   style={{ background: C.surface, border: `2px solid ${C.border}`, borderRadius: 14, padding: '20px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FFF0F0'; (e.currentTarget as HTMLButtonElement).style.borderColor = C.red; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>{item.emoji}</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Finance & Payments</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Wallet, payments and redemptions</div>
                 </button>
               ))}
             </div>
@@ -277,3 +282,4 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     </div>
   );
 }
+
