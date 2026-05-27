@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { startTransition, useDeferredValue, useEffect, useEffectEvent, useState, type CSSProperties } from 'react';
 import {
   Activity,
   CalendarClock,
@@ -40,6 +40,17 @@ interface ActivityBuckets {
   inactive: ActivityCardData[];
 }
 
+interface ActivityApiResponse {
+  data?: ActivityRow[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+}
+
+const ROLE_PAGE_SIZE = 250;
+const CARD_RENDER_CHUNK = 24;
+
 const ROLE_TABS: Array<{
   id: RoleTab;
   label: string;
@@ -48,7 +59,7 @@ const ROLE_TABS: Array<{
   hint: string;
 }> = [
   { id: 'electrician', label: 'Electrician', Icon: Zap, accent: '#2563EB', hint: 'Scans, points, wallet and recent activity' },
-  { id: 'dealer', label: 'Dealer', Icon: Store, accent: '#DC2626', hint: 'Recent access and electrician growth' },
+  { id: 'dealer', label: 'Dealer', Icon: Store, accent: '#A16207', hint: 'Recent access and electrician growth' },
   { id: 'counterboy', label: 'Counter Boy', Icon: UserCheck, accent: '#7C3AED', hint: 'Scans, points and wallet engagement' },
   { id: 'customer', label: 'Customer', Icon: Users, accent: '#0F766E', hint: 'Reward usage and account engagement' },
 ];
@@ -70,6 +81,34 @@ const emptyBuckets = (): ActivityBuckets => ({
   proactive: [],
   active: [],
   inactive: [],
+});
+
+const createRoleBooleanState = (value: boolean): Record<RoleTab, boolean> => ({
+  electrician: value,
+  dealer: value,
+  counterboy: value,
+  customer: value,
+});
+
+const createRoleNumberState = (value: number): Record<RoleTab, number> => ({
+  electrician: value,
+  dealer: value,
+  counterboy: value,
+  customer: value,
+});
+
+const createRoleNullableNumberState = (value: number | null): Record<RoleTab, number | null> => ({
+  electrician: value,
+  dealer: value,
+  counterboy: value,
+  customer: value,
+});
+
+const createRoleStringState = (value: string): Record<RoleTab, string> => ({
+  electrician: value,
+  dealer: value,
+  counterboy: value,
+  customer: value,
 });
 
 function getString(row: ActivityRow, key: string): string {
@@ -269,13 +308,22 @@ function classifyRow(row: ActivityRow, role: RoleTab): { bucket: ActivityTab; re
   return { bucket: 'inactive', reason: 'Customer has low or missing recent engagement signals.', score };
 }
 
-function buildBuckets(rows: ActivityRow[], role: RoleTab): ActivityBuckets {
-  const buckets = emptyBuckets();
+function appendRowsToBuckets(
+  current: ActivityBuckets,
+  rows: ActivityRow[],
+  role: RoleTab,
+  startIndex = 0
+): ActivityBuckets {
+  const buckets: ActivityBuckets = {
+    proactive: [...current.proactive],
+    active: [...current.active],
+    inactive: [...current.inactive],
+  };
 
   rows.forEach((row, index) => {
     const classification = classifyRow(row, role);
     buckets[classification.bucket].push({
-      id: getString(row, 'id') || `${role}-${index}`,
+      id: getString(row, 'id') || `${role}-${startIndex + index}`,
       name: getDisplayName(row, role),
       code: getCode(row, role) || 'Code unavailable',
       phone: getString(row, 'phone') || 'Phone unavailable',
@@ -299,58 +347,107 @@ export default function ProActiveInactiveHub() {
   const C = useThemePalette();
   const [activeRole, setActiveRole] = useState<RoleTab>('electrician');
   const [activeBucket, setActiveBucket] = useState<ActivityTab>('proactive');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [visibleCount, setVisibleCount] = useState(CARD_RENDER_CHUNK);
   const [datasets, setDatasets] = useState<Record<RoleTab, ActivityBuckets>>({
     electrician: emptyBuckets(),
     dealer: emptyBuckets(),
     counterboy: emptyBuckets(),
     customer: emptyBuckets(),
   });
+  const [loadingRoles, setLoadingRoles] = useState<Record<RoleTab, boolean>>(createRoleBooleanState(false));
+  const [loadedRoles, setLoadedRoles] = useState<Record<RoleTab, boolean>>(createRoleBooleanState(false));
+  const [roleErrors, setRoleErrors] = useState<Record<RoleTab, string>>(createRoleStringState(''));
+  const [loadedCounts, setLoadedCounts] = useState<Record<RoleTab, number>>(createRoleNumberState(0));
+  const [totalCounts, setTotalCounts] = useState<Record<RoleTab, number | null>>(createRoleNullableNumberState(null));
+
+  const loadRole = useEffectEvent(async (role: RoleTab) => {
+    if (loadingRoles[role] || loadedRoles[role]) return;
+
+    const fetcher: (params?: Record<string, string>) => Promise<ActivityApiResponse> =
+      role === 'electrician'
+        ? electricianApi.getAll
+        : role === 'dealer'
+          ? dealerApi.getAll
+          : role === 'counterboy'
+            ? counterboyApi.getAll
+            : appUserApi.getAll;
+
+    setLoadingRoles((current) => ({ ...current, [role]: true }));
+    setRoleErrors((current) => ({ ...current, [role]: '' }));
+
+    let page = 1;
+    let processedRows = 0;
+    let totalPages = 1;
+    let totalRows: number | null = null;
+    let nextBuckets = emptyBuckets();
+
+    try {
+      while (true) {
+        const response = await fetcher({ page: String(page), limit: String(ROLE_PAGE_SIZE) });
+        const pageRows = Array.isArray(response.data) ? response.data : [];
+
+        if (page === 1) {
+          totalRows = typeof response.total === 'number' ? response.total : null;
+          totalPages =
+            typeof response.totalPages === 'number'
+              ? response.totalPages
+              : totalRows !== null
+                ? Math.max(1, Math.ceil(totalRows / ROLE_PAGE_SIZE))
+                : pageRows.length < ROLE_PAGE_SIZE
+                  ? 1
+                  : Number.POSITIVE_INFINITY;
+          setTotalCounts((current) => ({ ...current, [role]: totalRows }));
+        }
+
+        nextBuckets = appendRowsToBuckets(nextBuckets, pageRows, role, processedRows);
+        processedRows += pageRows.length;
+
+        startTransition(() => {
+          setDatasets((current) => ({ ...current, [role]: nextBuckets }));
+          setLoadedCounts((current) => ({ ...current, [role]: processedRows }));
+        });
+
+        if (pageRows.length === 0 || pageRows.length < ROLE_PAGE_SIZE || page >= totalPages) {
+          break;
+        }
+
+        page += 1;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      setLoadedRoles((current) => ({ ...current, [role]: true }));
+    } catch (loadError) {
+      setRoleErrors((current) => ({
+        ...current,
+        [role]: loadError instanceof Error ? loadError.message : 'Could not load activity data.',
+      }));
+    } finally {
+      setLoadingRoles((current) => ({ ...current, [role]: false }));
+    }
+  });
 
   useEffect(() => {
-    let mounted = true;
+    void loadRole(activeRole);
+  }, [activeRole]);
 
-    const load = async () => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const [electricians, dealers, counterboys, customers] = await Promise.all([
-          electricianApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
-          dealerApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
-          counterboyApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
-          appUserApi.getAll({ page: '1', limit: '5000' }).catch(() => ({ data: [] })),
-        ]);
-
-        if (!mounted) return;
-
-        setDatasets({
-          electrician: buildBuckets(Array.isArray(electricians.data) ? electricians.data : [], 'electrician'),
-          dealer: buildBuckets(Array.isArray(dealers.data) ? dealers.data : [], 'dealer'),
-          counterboy: buildBuckets(Array.isArray(counterboys.data) ? counterboys.data : [], 'counterboy'),
-          customer: buildBuckets(Array.isArray(customers.data) ? customers.data : [], 'customer'),
-        });
-      } catch (loadError) {
-        if (!mounted) return;
-        setError(loadError instanceof Error ? loadError.message : 'Could not load activity data.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    setVisibleCount(CARD_RENDER_CHUNK);
+  }, [activeRole, activeBucket]);
 
   const roleMeta = ROLE_TABS.find((tab) => tab.id === activeRole) ?? ROLE_TABS[0];
   const RoleMetaIcon = roleMeta.Icon;
   const activeData = datasets[activeRole];
-  const bucketRows = activeData[activeBucket];
+  const bucketRows = useDeferredValue(activeData[activeBucket]);
+  const visibleRows = bucketRows.slice(0, visibleCount);
   const totalForRole = activeData.proactive.length + activeData.active.length + activeData.inactive.length;
+  const loadedForRole = loadedCounts[activeRole];
+  const totalExpectedForRole = totalCounts[activeRole];
+  const roleLoading = loadingRoles[activeRole];
+  const roleLoaded = loadedRoles[activeRole];
+  const roleError = roleErrors[activeRole];
+  const hasMoreRows = visibleCount < bucketRows.length;
+  const showInitialLoader = totalForRole === 0 && (roleLoading || (!roleLoaded && !roleError));
+  const showEmptyState = totalForRole === 0 && roleLoaded && !roleLoading && !roleError;
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, overflowX: 'hidden' }}>
@@ -465,8 +562,21 @@ export default function ProActiveInactiveHub() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: C.muted }}>
-              <span>Total records: <strong style={{ color: C.text }}>{formatNumber.format(totalForRole)}</strong></span>
+              <span>
+                Loaded records:{' '}
+                <strong style={{ color: C.text }}>
+                  {formatNumber.format(totalForRole)}
+                  {typeof totalExpectedForRole === 'number' && totalExpectedForRole > totalForRole
+                    ? ` / ${formatNumber.format(totalExpectedForRole)}`
+                    : ''}
+                </strong>
+              </span>
               <span>Current bucket: <strong style={{ color: roleMeta.accent }}>{ACTIVITY_TABS.find((tab) => tab.id === activeBucket)?.label}</strong></span>
+              {roleLoading ? (
+                <span>Streaming more records in small chunks for a faster first paint.</span>
+              ) : loadedForRole > 0 ? (
+                <span>Chunked cards keep long lists lighter and faster to open.</span>
+              ) : null}
             </div>
           </div>
 
@@ -513,7 +623,24 @@ export default function ProActiveInactiveHub() {
           })}
         </div>
 
-        {loading ? (
+        {roleError && totalForRole > 0 ? (
+          <div
+            style={{
+              background: `${roleMeta.accent}10`,
+              border: `1px solid ${roleMeta.accent}25`,
+              borderRadius: 18,
+              padding: '14px 16px',
+              marginBottom: 18,
+              color: C.text,
+              boxShadow: C.shadow,
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Partial data loaded</div>
+            <div style={{ fontSize: 12.5, color: C.muted }}>{roleError}</div>
+          </div>
+        ) : null}
+
+        {showInitialLoader ? (
           <div
             style={{
               background: C.card,
@@ -527,9 +654,9 @@ export default function ProActiveInactiveHub() {
           >
             <RefreshCcw size={22} style={{ marginBottom: 12, animation: 'spin 1s linear infinite' }} />
             <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>Loading activity insights</div>
-            <div style={{ fontSize: 12 }}>Fetching role data and building the engagement buckets.</div>
+            <div style={{ fontSize: 12 }}>Fetching {roleMeta.label.toLowerCase()} records page-by-page and building the engagement buckets.</div>
           </div>
-        ) : error ? (
+        ) : roleError ? (
           <div
             style={{
               background: C.card,
@@ -542,9 +669,9 @@ export default function ProActiveInactiveHub() {
             }}
           >
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Could not load this overview</div>
-            <div style={{ fontSize: 13 }}>{error}</div>
+            <div style={{ fontSize: 13 }}>{roleError}</div>
           </div>
-        ) : bucketRows.length === 0 ? (
+        ) : showEmptyState ? (
           <div
             style={{
               background: C.card,
@@ -561,105 +688,155 @@ export default function ProActiveInactiveHub() {
               Try another role or switch to a different activity status tab.
             </div>
           </div>
+        ) : bucketRows.length === 0 ? (
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 24,
+              padding: '36px 28px',
+              textAlign: 'center',
+              color: C.muted,
+              boxShadow: C.shadow,
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>No records found in this bucket</div>
+            <div style={{ fontSize: 13 }}>
+              The role is loaded, but this activity segment is currently empty.
+            </div>
+          </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
-            {bucketRows.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  background: C.card,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: 22,
-                  padding: 20,
-                  boxShadow: C.shadow,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 15,
-                        background: `${roleMeta.accent}15`,
-                        color: roleMeta.accent,
-                        fontWeight: 800,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {item.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 4 }}>{item.name}</div>
-                      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 2 }}>{item.code}</div>
-                      <div style={{ fontSize: 12.5, color: C.muted }}>{item.phone}</div>
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      background: `${roleMeta.accent}12`,
-                      color: roleMeta.accent,
-                      borderRadius: 999,
-                      padding: '6px 10px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'capitalize',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {item.status}
-                  </span>
-                </div>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 13, color: C.muted }}>
+                Showing <strong style={{ color: C.text }}>{formatNumber.format(visibleRows.length)}</strong> of{' '}
+                <strong style={{ color: C.text }}>{formatNumber.format(bucketRows.length)}</strong> cards in this bucket.
+              </div>
+              {roleLoading ? (
+                <div style={{ fontSize: 12, color: roleMeta.accent, fontWeight: 700 }}>More rows are still loading in the background.</div>
+              ) : null}
+            </div>
 
-                <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
-                    <CalendarClock size={14} />
-                    Last signal: <strong style={{ color: C.text }}>{item.lastSeen}</strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
-                    <Users size={14} />
-                    {item.location}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                  {item.metrics.map((metric) => (
-                    <span
-                      key={metric}
-                      style={{
-                        background: C.bg,
-                        border: `1px solid ${C.border}`,
-                        borderRadius: 999,
-                        padding: '7px 10px',
-                        fontSize: 11.5,
-                        color: C.text,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {metric}
-                    </span>
-                  ))}
-                </div>
-
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
+              {visibleRows.map((item) => (
                 <div
+                  key={item.id}
                   style={{
-                    background: C.bg,
+                    background: C.card,
                     border: `1px solid ${C.border}`,
-                    borderRadius: 16,
-                    padding: 14,
-                    fontSize: 12.5,
-                    color: C.muted,
-                    lineHeight: 1.5,
+                    borderRadius: 22,
+                    padding: 20,
+                    boxShadow: C.shadow,
                   }}
                 >
-                  {item.reason}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 15,
+                          background: `${roleMeta.accent}15`,
+                          color: roleMeta.accent,
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {item.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 4 }}>{item.name}</div>
+                        <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 2 }}>{item.code}</div>
+                        <div style={{ fontSize: 12.5, color: C.muted }}>{item.phone}</div>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        background: `${roleMeta.accent}12`,
+                        color: roleMeta.accent,
+                        borderRadius: 999,
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'capitalize',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
+                      <CalendarClock size={14} />
+                      Last signal: <strong style={{ color: C.text }}>{item.lastSeen}</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.muted }}>
+                      <Users size={14} />
+                      {item.location}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                    {item.metrics.map((metric) => (
+                      <span
+                        key={metric}
+                        style={{
+                          background: C.bg,
+                          border: `1px solid ${C.border}`,
+                          borderRadius: 999,
+                          padding: '7px 10px',
+                          fontSize: 11.5,
+                          color: C.text,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {metric}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div
+                    style={{
+                      background: C.bg,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 16,
+                      padding: 14,
+                      fontSize: 12.5,
+                      color: C.muted,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item.reason}
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {hasMoreRows ? (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+                <button
+                  onClick={() => setVisibleCount((current) => current + CARD_RENDER_CHUNK)}
+                  style={{
+                    background: `${roleMeta.accent}12`,
+                    color: roleMeta.accent,
+                    border: `1px solid ${roleMeta.accent}28`,
+                    borderRadius: 999,
+                    padding: '12px 20px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: C.shadow,
+                  }}
+                >
+                  Load {Math.min(CARD_RENDER_CHUNK, bucketRows.length - visibleCount)} more cards
+                </button>
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
       </div>
 

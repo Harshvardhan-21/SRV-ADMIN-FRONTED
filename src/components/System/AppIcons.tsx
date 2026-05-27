@@ -246,7 +246,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
                   }}>{icon.isActive ? 'ACTIVE' : 'INACTIVE'}</span>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-                  Order: {icon.displayOrder} | {icon.imageUrl ? 'Image uploaded' : 'No image'}
+                  {icon.imageUrl ? 'Image uploaded' : 'No image'}
                 </div>
               </div>
 
@@ -373,7 +373,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
               </div>
             </div>
 
-            {/* Active Toggle + Display Order */}
+            {/* Active Toggle */}
             <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
                 <div onClick={() => setForm(prev => ({ ...prev, isActive: !prev.isActive }))} style={{
@@ -389,17 +389,6 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Set as active icon</span>
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>Order:</label>
-                <input type="number" value={form.displayOrder}
-                  onChange={e => setForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-                  style={{
-                    width: 60, padding: '6px 10px', borderRadius: 8,
-                    border: `1.5px solid ${C.border}`, fontSize: 13,
-                    background: C.surface, color: C.text, outline: 'none', textAlign: 'center',
-                  }}
-                />
-              </div>
             </div>
 
             {/* Actions */}
