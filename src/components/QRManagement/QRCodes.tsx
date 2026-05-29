@@ -25,6 +25,8 @@ interface QRCodeItem {
   status: 'active' | 'used';
   usedDate?: string;
   usedBy?: string;
+  lastScannedPhone?: string;
+  lastScannedCode?: string;
   qrImage: string;
 }
 
@@ -143,6 +145,8 @@ export default function QRCodes({ role }: QRCodesProps) {
             status: (qr.isScanned || qr.status === 'used') ? 'used' : 'active',
             usedDate: qr.lastScannedAt ?? qr.usedDate,
             usedBy: qr.lastScannedBy ?? qr.usedBy,
+            lastScannedPhone: qr.lastScannedPhone,
+            lastScannedCode: qr.lastScannedCode,
             qrImage,
           };
           return item;
@@ -189,7 +193,7 @@ export default function QRCodes({ role }: QRCodesProps) {
   const handleDownloadQR = (qr: QRCodeItem) => {
     const link = document.createElement('a');
     link.href = qr.qrImage;
-    link.download = `${qr.qrId}.svg`;
+    link.download = `${qr.qrId}.png`;
     link.click();
   };
 
@@ -593,7 +597,11 @@ export default function QRCodes({ role }: QRCodesProps) {
               {selectedQR.usedBy && (
                 <div style={{ background: C.bg, borderRadius: 12, padding: 16 }}>
                   <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>Used By</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{selectedQR.usedBy}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                    {selectedQR.lastScannedPhone || selectedQR.lastScannedCode
+                      ? `${selectedQR.lastScannedPhone ?? ''}${selectedQR.lastScannedPhone && selectedQR.lastScannedCode ? ' · ' : ''}${selectedQR.lastScannedCode ?? ''}`
+                      : 'N/A'}
+                  </div>
                 </div>
               )}
             </div>

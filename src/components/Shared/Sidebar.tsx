@@ -38,6 +38,7 @@ const NAV_GROUPS = [
   {
     label: 'QR Management',
     items: [
+      { id: 'qr-hub', label: 'QR Hub', Icon: QrCode },
       { id: 'qr-codes', label: 'QR Codes', Icon: QrCode },
       { id: 'qr-generator', label: 'QR Generator', Icon: QrCode },
     ]

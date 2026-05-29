@@ -18,6 +18,7 @@ const AppUserHub         = lazy(() => import('@/components/AppUser/AppUserHub'))
 const CounterBoyHub      = lazy(() => import('@/components/CounterBoy/CounterBoyHub'));
 const Products           = lazy(() => import('@/components/Catalog/Products'));
 const ProductCategories  = lazy(() => import('@/components/Catalog/ProductCategories'));
+const QRHub              = lazy(() => import('@/components/QRManagement/QRHub'));
 const QRCodes            = lazy(() => import('@/components/QRManagement/QRCodes'));
 const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGenerator'));
 const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
@@ -87,6 +88,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   products: { title: 'Products', Icon: Package },
   'product-categories': { title: 'Product Categories', Icon: Tag },
   'points-config': { title: 'Products Points', Icon: Star },
+  'qr-hub': { title: 'QR Hub', Icon: QrCode },
   'qr-codes': { title: 'QR Codes', Icon: QrCode },
   'qr-generator': { title: 'QR Generator', Icon: QrCode },
   'gift-products': { title: 'Gift Products', Icon: Gift },
@@ -192,6 +194,7 @@ export default function Home() {
         'dealers': ['dealer', 'distributor', 'retailer', 'seller'],
         'products': ['product', 'item', 'catalog', 'inventory', 'stock'],
         'points-config': ['points', 'config', 'rewards'],
+        'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
         'qr-codes': ['qr', 'qrcode', 'code', 'scan', 'barcode'],
         'scans': ['scan', 'history', 'activity'],
         'redemptions': ['redemption', 'redeem', 'pending', 'approve'],
@@ -348,6 +351,7 @@ export default function Home() {
         }
       }} />;
       case 'points-config': return <PointsConfig role={role} />;
+      case 'qr-hub': return <QRHub role={role} />;
       case 'qr-codes': return <QRCodes role={role} />;
       case 'qr-generator': return <QRCodeGenerator role={role} />;
       case 'gift-products': return <GiftProducts role={role} />;
@@ -1028,4 +1032,3 @@ export default function Home() {
     </div>
   );
 }
-

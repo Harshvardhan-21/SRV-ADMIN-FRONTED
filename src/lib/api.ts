@@ -253,10 +253,17 @@ export const qrCodeApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number }>(`/qr-codes${q}`);
   },
+  getHub: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/hub${q}`);
+  },
   getStats: () =>
     request<{ total: number; active: number; used: number }>('/qr-codes/stats'),
   generate: (body: { productId: string; quantity: number; batchId?: string }) =>
     request<any>('/qr-codes/generate', { method: 'POST', body: JSON.stringify(body) }),
+  updateBatch: (batchId: string, body: { productId?: string; rewardPoints?: number }) =>
+    request<any>(`/qr-codes/batches/${batchId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteBatch: (batchId: string) => request<void>(`/qr-codes/batches/${batchId}`, { method: 'DELETE' }),
   delete: (id: string) => request<void>(`/qr-codes/${id}`, { method: 'DELETE' }),
   deleteAll: (productId?: string) => {
     const q = productId ? `?productId=${productId}` : '';
