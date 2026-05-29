@@ -58,7 +58,7 @@ export default function EnquirySupport() {
         priority: e.priority ?? 'medium',
         createdAt: e.createdAt ?? e.created_at ?? new Date().toISOString(),
         updatedAt: e.updatedAt ?? e.updated_at ?? new Date().toISOString(),
-        replies: e.replies ?? [],
+        replies: (e.replies ?? []).map((r: any, i: number) => ({ id: r.id || `r${Date.now()}_${i}`, ...r })),
       })));
     } catch (err) {
       console.error('Failed to load enquiries:', err);

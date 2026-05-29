@@ -1,6 +1,6 @@
  'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FileCheck, Eye, Check, X, Upload, ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { FileCheck, Eye, Check, X, Search, Upload, ImageIcon, Pencil, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -134,6 +134,7 @@ export default function KYCManagement() {
   const C = useThemePalette();
   const [documents, setDocuments] = useState<DealerKYC[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedDoc, setSelectedDoc] = useState<DealerKYC | null>(null);
   const [editingDoc, setEditingDoc] = useState<DealerKYC | null>(null);
@@ -171,7 +172,18 @@ export default function KYCManagement() {
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const filtered = documents.filter(d => filterStatus === 'all' || d.kycStatus === filterStatus);
+  const filtered = documents.filter(d => {
+    const q = search.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      d.dealerName.toLowerCase().includes(q) ||
+      d.dealerCode.toLowerCase().includes(q) ||
+      d.aadharNumber?.toLowerCase().includes(q) ||
+      d.panNumber?.toLowerCase().includes(q) ||
+      d.gstNumber?.toLowerCase().includes(q);
+    const matchStatus = filterStatus === 'all' || d.kycStatus === filterStatus;
+    return matchSearch && matchStatus;
+  });
 
   // Sort: pending first (new requests), then rejected, not_submitted, verified last
   const STATUS_ORDER: Record<string, number> = { pending: 0, rejected: 1, not_submitted: 2, verified: 3 };
@@ -285,7 +297,16 @@ export default function KYCManagement() {
         ))}
       </div>
 
-      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by dealer, code, Aadhaar, PAN or GST..."
+            style={{ width: '100%', padding: '9px 12px 9px 38px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text, boxSizing: 'border-box' }}
+          />
+        </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text }}>
           <option value="all">All Status</option>
           <option value="verified">Verified</option>

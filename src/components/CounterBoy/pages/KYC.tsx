@@ -240,15 +240,29 @@ export default function CounterBoyKYC() {
   const handleEditSave = async (data: Partial<CounterBoyKYCItem>) => {
     if (!editingDoc) return;
     try {
+      const nextStatus: CounterBoyKYCItem['kycStatus'] = data.kycStatus ?? editingDoc.kycStatus;
       const payload = {
         aadharFrontImage: data.aadharFrontImage ?? null,
-        kycStatus: data.kycStatus,
-        kycRejectionReason: data.kycStatus === 'rejected' ? data.kycRejectionReason ?? null : null,
+        kycStatus: nextStatus,
+        kycRejectionReason: nextStatus === 'rejected' ? data.kycRejectionReason ?? null : null,
         panNumber: null,
         panDocument: null,
       };
       await counterboyApi.update(editingDoc.id, payload);
-      setDocuments(prev => prev.map(item => item.id === editingDoc.id ? { ...item, ...payload, aadharFrontImage: normalizeUrl(payload.aadharFrontImage ?? undefined) } : item));
+      setDocuments(prev =>
+        prev.map(item =>
+          item.id === editingDoc.id
+            ? {
+                ...item,
+                kycStatus: nextStatus,
+                kycRejectionReason: nextStatus === 'rejected' ? (data.kycRejectionReason ?? item.kycRejectionReason) : undefined,
+                aadharFrontImage: normalizeUrl(payload.aadharFrontImage ?? undefined),
+                panNumber: undefined,
+                panDocument: undefined,
+              }
+            : item,
+        ),
+      );
       setEditingDoc(null);
     } catch (error) {
       console.error(error);

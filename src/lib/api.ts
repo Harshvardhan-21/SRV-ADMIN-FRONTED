@@ -278,6 +278,11 @@ export const redemptionApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number }>(`/redemptions${q}`);
   },
+  updateStatus: (id: string, status: string, rejectionReason?: string) =>
+    request<any>(`/redemptions/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, rejectionReason }),
+    }),
   approve: (id: string) => request<any>(`/redemptions/${id}/approve`, { method: 'PATCH' }),
   reject: (id: string, reason?: string) =>
     request<any>(`/redemptions/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ rejectionReason: reason || 'Rejected by admin' }) }),

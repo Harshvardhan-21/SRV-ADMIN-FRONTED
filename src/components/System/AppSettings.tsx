@@ -23,7 +23,7 @@ interface AppConfig {
   dealerCommissionRate: number;
   // App Features
   scanEnabled: boolean; giftsEnabled: boolean; referralEnabled: boolean; transferPointsEnabled: boolean;
-  testimonialsEnabled: boolean; playEnabled: boolean;
+  testimonialsEnabled: boolean; playEnabled: boolean; dealerCanAddElectrician: boolean;
   // Links
   privacyPolicyUrl: string; termsUrl: string; playStoreUrl: string; appStoreUrl: string;
   // Rate Us
@@ -45,7 +45,7 @@ const INITIAL: AppConfig = {
   dealerSilverMin: 0, dealerGoldMin: 11, dealerPlatinumMin: 26, dealerDiamondMin: 51,
   dealerCommissionRate: 5,
   scanEnabled: true, giftsEnabled: true, referralEnabled: true, transferPointsEnabled: true,
-  testimonialsEnabled: true, playEnabled: true,
+  testimonialsEnabled: true, playEnabled: true, dealerCanAddElectrician: true,
   privacyPolicyUrl: 'https://srvelectricals.com/privacy', termsUrl: 'https://srvelectricals.com/terms',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.srvelectricals', appStoreUrl: 'https://apps.apple.com/app/srv-electricals',
   rateUsEnabled: true, rateUsMinScans: 5, rateUsPromptDelay: 3, playStoreRatingUrl: 'market://details?id=com.srvelectricals', appStoreRatingUrl: 'https://apps.apple.com/app/srv-electricals',
@@ -402,6 +402,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 { key: 'transferPointsEnabled', label: 'Transfer Points', desc: 'Allow electricians to transfer points to dealers' },
                 { key: 'testimonialsEnabled', label: 'Testimonials Section', desc: 'Show testimonials section on all home screens in the app' },
                 { key: 'playEnabled', label: '▶️ Play Zone (Videos)', desc: 'Enable the Play Zone video section for customers. Disable to show a "Coming Soon" screen instead.' },
+                { key: 'dealerCanAddElectrician', label: 'Dealer Can Add Electrician', desc: 'Allow dealers to add new electricians from their app. When disabled, the "Add Electrician" button is hidden from dealer screens.' },
               ].map(item => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
                   <div>
