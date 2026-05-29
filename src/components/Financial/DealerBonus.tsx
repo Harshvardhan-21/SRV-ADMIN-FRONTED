@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Upload, DollarSign, Check, Pencil } from 'lucide-react';
+import { Upload, DollarSign, Check, Pencil, Search } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { financeApi, settingsApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -106,7 +106,11 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
     if (monthFilter !== 'all') list = list.filter(c => c.month === monthFilter);
     if (yearFilter !== 'all') list = list.filter(c => c.year === Number(yearFilter));
     if (statusFilter !== 'all') list = list.filter(c => c.status === statusFilter);
-    if (dealerFilter) list = list.filter(c => c.dealerName.toLowerCase().includes(dealerFilter.toLowerCase()));
+    if (dealerFilter) list = list.filter(c =>
+      c.dealerName.toLowerCase().includes(dealerFilter.toLowerCase()) ||
+      c.dealerPhone.includes(dealerFilter) ||
+      c.id.toLowerCase().includes(dealerFilter.toLowerCase())
+    );
     return list;
   }, [bonuses, monthFilter, yearFilter, statusFilter, dealerFilter]);
 
@@ -222,7 +226,13 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
           <option value="2025">2025</option>
           <option value="2024">2024</option>
         </select>
-        <input value={dealerFilter} onChange={e => setDealerFilter(e.target.value)} placeholder="Filter by dealer..." style={inputStyle} />
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, color: C.muted, pointerEvents: 'none' }} />
+          <input value={dealerFilter} onChange={e => setDealerFilter(e.target.value)} placeholder="Search dealer name, phone, or ID..." style={{ ...inputStyle, paddingLeft: 30, width: 220 }} />
+          {dealerFilter && (
+            <button onClick={() => setDealerFilter('')} style={{ position: 'absolute', right: 6, background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 14, padding: '2px 4px', lineHeight: 1 }}>✕</button>
+          )}
+        </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inputStyle}>
           <option value="all">All Statuses</option>
           <option value="pending">Pending</option>

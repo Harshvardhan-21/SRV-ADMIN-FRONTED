@@ -23,6 +23,43 @@ const EMPTY_FORM = {
   specificUserId: '', specificUserName: '',
 };
 
+const TARGET_LABELS: Record<string, string> = {
+  electrician: 'Only Electricians',
+  dealer: 'Only Dealers',
+  user: 'Only Customers',
+  counterboy: 'Only Counterboys',
+};
+
+function normalizeTargetRole(target: string) {
+  switch (target) {
+    case 'Only Electricians':
+      return 'electrician';
+    case 'Only Dealers':
+      return 'dealer';
+    case 'Only Customers':
+      return 'user';
+    case 'Only Counterboys':
+      return 'counterboy';
+    case 'All Users':
+    case 'Specific User':
+      return null;
+    default:
+      return target || null;
+  }
+}
+
+function formatTargetLabel(targetRole?: string | null, targetUserIds?: string[] | null) {
+  if (targetUserIds?.length) {
+    return 'Specific User';
+  }
+
+  if (!targetRole) {
+    return 'All Users';
+  }
+
+  return TARGET_LABELS[targetRole] ?? targetRole;
+}
+
 export default function NotificationsPage({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
   const isSuperAdmin = role === 'super_admin';
@@ -54,7 +91,10 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
         id: n.id,
         title: n.title,
         body: n.message ?? n.body ?? '',
-        target: n.targetRole ?? n.target_role ?? n.target ?? 'All Users',
+        target: formatTargetLabel(
+          n.targetRole ?? n.target_role ?? n.target,
+          n.targetUserIds ?? n.target_user_ids,
+        ),
         type: n.type ?? 'General',
         sentOn: n.sentAt ?? n.sent_at ?? n.createdAt ?? new Date().toISOString(),
         status: n.status ?? 'sent',
@@ -110,12 +150,15 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
       const payload: any = {
         title: form.title,
         message: form.body,
-        targetRole: form.target === 'Specific User' ? null : form.target,
+        targetRole: normalizeTargetRole(form.target),
         targetUserIds: form.target === 'Specific User' ? [form.specificUserId] : undefined,
-        status: form.scheduleMode === 'schedule' ? 'scheduled' : 'sent',
+        status: form.scheduleMode === 'schedule' ? 'scheduled' : 'draft',
         scheduledAt: form.scheduleMode === 'schedule' ? form.scheduledAt : undefined,
       };
-      await notificationApi.create(payload);
+      const created = await notificationApi.create(payload);
+      if (form.scheduleMode === 'now' && created?.id) {
+        await notificationApi.send(created.id);
+      }
       await loadNotifications();
       setForm(EMPTY_FORM);
       setUserQuery('');
@@ -141,7 +184,7 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
       await notificationApi.update(editItem.id, {
         title: editForm.title,
         message: editForm.body,
-        targetRole: editForm.target,
+        targetRole: normalizeTargetRole(editForm.target),
         status: editForm.status,
       });
       await loadNotifications();

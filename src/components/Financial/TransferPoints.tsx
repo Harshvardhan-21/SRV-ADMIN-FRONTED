@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal, Eye, Upload, ArrowLeftRight, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { financeApi, settingsApi } from '@/lib/api';
+import { financeApi, settingsApi, userSearchApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -62,6 +62,10 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
   const [reverseId, setReverseId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [fromSearchResults, setFromSearchResults] = useState<any[]>([]);
+  const [toSearchResults, setToSearchResults] = useState<any[]>([]);
+  const [selectedFromUser, setSelectedFromUser] = useState<any>(null);
+  const [selectedToUser, setSelectedToUser] = useState<any>(null);
   const [editItem, setEditItem] = useState<Transfer | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
@@ -175,9 +179,40 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
     setEditItem(null);
   };
 
+  const handleUserSearch = async (field: 'from' | 'to', q: string) => {
+    if (q.length < 2) { field === 'from' ? setFromSearchResults([]) : setToSearchResults([]); return; }
+    try {
+      const results = await userSearchApi.search(q);
+      const filtered = results.filter((u: any) => u.role === 'dealer' || u.role === 'electrician');
+      if (field === 'from') setFromSearchResults(filtered);
+      else setToSearchResults(filtered);
+    } catch { /* ignore */ }
+  };
+
+  const selectUser = (field: 'from' | 'to', user: any) => {
+    if (field === 'from') {
+      setSelectedFromUser(user);
+      setFromSearchResults([]);
+      setForm(f => ({ ...f, fromUser: user.id }));
+    } else {
+      setSelectedToUser(user);
+      setToSearchResults([]);
+      setForm(f => ({ ...f, toUser: user.id }));
+    }
+  };
+
+  const closeTransferModal = () => {
+    setShowTransferModal(false);
+    setForm(EMPTY_FORM);
+    setSelectedFromUser(null);
+    setSelectedToUser(null);
+    setFromSearchResults([]);
+    setToSearchResults([]);
+  };
+
   const handleManualTransfer = async () => {
-    if (!form.fromUser.trim() || !form.toUser.trim() || form.points <= 0) {
-      setAlertDialog({ show: true, title: 'Required Fields Missing', message: 'Please fill all required fields (From User, To User, Points)', type: 'error' });
+    if (!selectedFromUser || !selectedToUser) {
+      setAlertDialog({ show: true, title: 'Select Users', message: 'Please select both From User and To User from the search results.', type: 'error' });
       return;
     }
     if (form.points < minTransferPoints) {
@@ -186,13 +221,12 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
     }
     const finalReason = form.reason === 'Other' ? form.customReason : form.reason;
     try {
-      await financeApi.transferPoints({ fromUser: form.fromUser, toUser: form.toUser, points: form.points, reason: finalReason });
+      await financeApi.transferPoints({ fromUser: selectedFromUser.id, toUser: selectedToUser.id, points: form.points, reason: finalReason });
       await loadTransfers();
-      setForm(EMPTY_FORM);
-      setShowTransferModal(false);
+      closeTransferModal();
     } catch (err) {
-      console.error('Failed to transfer points:', err);
-      setAlertDialog({ show: true, title: 'Error', message: 'Failed to transfer points. Please try again.', type: 'error' });
+      const msg = err instanceof Error ? err.message : 'Failed to transfer points.';
+      setAlertDialog({ show: true, title: 'Transfer Failed', message: msg, type: 'error' });
     }
   };
 
@@ -234,11 +268,8 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
             </div>
           ))}
-          {canCreate && <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {canCreate && <button onClick={() => { setForm(EMPTY_FORM); setSelectedFromUser(null); setSelectedToUser(null); setFromSearchResults([]); setToSearchResults([]); setShowTransferModal(true); }} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <ArrowLeftRight size={14} /> Manual Transfer
-          </button>}
-          {canCreate && <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.3)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            + Add New Transfer
           </button>}
         </div>
       </div>
@@ -359,8 +390,8 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
 
       {/* Manual Transfer Modal */}
       {showTransferModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowTransferModal(false)}>
-          <div style={{ background: C.card, borderRadius: 18, width: 440, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={closeTransferModal}>
+          <div style={{ background: C.card, borderRadius: 18, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(15,118,110,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -368,16 +399,72 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Manual Transfer</div>
               </div>
-              <button onClick={() => setShowTransferModal(false)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✕</button>
+              <button onClick={closeTransferModal} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={labelStyle}>From User *</label>
-                <input value={form.fromUser} onChange={e => setForm(f => ({ ...f, fromUser: e.target.value }))} placeholder="Name or code" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                {selectedFromUser ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#DBEAFE' }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1E40AF' }}>
+                      {selectedFromUser.name} ({selectedFromUser.phone}) — {selectedFromUser.role}
+                    </div>
+                    <button onClick={() => { setSelectedFromUser(null); setForm(f => ({ ...f, fromUser: '' })); }} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 16, padding: 2 }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <input value={form.fromUser} onChange={e => { setForm(f => ({ ...f, fromUser: e.target.value })); handleUserSearch('from', e.target.value); }} placeholder="Type name, phone, or code..." style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                    {fromSearchResults.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, maxHeight: 200, overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: C.shadow }}>
+                        {fromSearchResults.map((u: any) => (
+                          <div key={u.id} onClick={() => selectUser('from', u)} style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 13, color: C.text }}
+                            onMouseEnter={e => (e.currentTarget.style.background = C.hoverRow)}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                            <div style={{ fontWeight: 600 }}>{u.name}</div>
+                            <div style={{ fontSize: 11, color: C.muted }}>{u.phone} • {u.role} • {u.electricianCode || u.dealerCode || u.userCode || u.counterboyCode || ''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {form.fromUser.length >= 2 && fromSearchResults.length === 0 && !selectedFromUser && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: '#DC2626' }}>
+                        No users found
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>To User *</label>
-                <input value={form.toUser} onChange={e => setForm(f => ({ ...f, toUser: e.target.value }))} placeholder="Name or phone" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                {selectedToUser ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#DBEAFE' }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#1E40AF' }}>
+                      {selectedToUser.name} ({selectedToUser.phone}) — {selectedToUser.role}
+                    </div>
+                    <button onClick={() => { setSelectedToUser(null); setForm(f => ({ ...f, toUser: '' })); }} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 16, padding: 2 }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <input value={form.toUser} onChange={e => { setForm(f => ({ ...f, toUser: e.target.value })); handleUserSearch('to', e.target.value); }} placeholder="Type name, phone, or code..." style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                    {toSearchResults.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, maxHeight: 200, overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: C.shadow }}>
+                        {toSearchResults.map((u: any) => (
+                          <div key={u.id} onClick={() => selectUser('to', u)} style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', fontSize: 13, color: C.text }}
+                            onMouseEnter={e => (e.currentTarget.style.background = C.hoverRow)}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                            <div style={{ fontWeight: 600 }}>{u.name}</div>
+                            <div style={{ fontSize: 11, color: C.muted }}>{u.phone} • {u.role} • {u.electricianCode || u.dealerCode || u.userCode || u.counterboyCode || ''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {form.toUser.length >= 2 && toSearchResults.length === 0 && !selectedToUser && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: '#DC2626' }}>
+                        No users found
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Points *</label>
@@ -400,7 +487,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
               )}
             </div>
             <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowTransferModal(false)} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={closeTransferModal} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleManualTransfer} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #0F766E, #0D9488)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Transfer Points</button>
             </div>
           </div>
