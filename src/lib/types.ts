@@ -55,6 +55,7 @@ export interface Electrician {
   panDocument?: string;
   gstDocument?: string;
   kycRejectionReason?: string;
+  hasPassword?: boolean;
 }
 
 export interface Dealer {
@@ -79,6 +80,8 @@ export interface Dealer {
   totalOrders?: number;
   monthlyTarget?: number;
   achievedTarget?: number;
+  bonusPoints?: number;
+  bonusStatus?: string;
   contactPerson?: string;
   salesManName?: string;
   townCode?: string;
@@ -92,6 +95,7 @@ export interface Dealer {
   panDocument?: string;
   gstDocument?: string;
   kycRejectionReason?: string;
+  hasPassword?: boolean;
 }
 
 export interface Product {
@@ -227,6 +231,7 @@ export interface AppUser {
   gstDocument?: string;
   kycRejectionReason?: string;
   joinedDate: string;
+  hasPassword?: boolean;
 }
 
 export interface AppIcon {
@@ -277,4 +282,5 @@ export interface CounterBoy {
   status: UserStatus;
   kycStatus: string;
   joinedDate: string;
+  hasPassword?: boolean;
 }

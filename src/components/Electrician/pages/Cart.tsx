@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Trash2, Package, Search } from 'lucide-react';
+import { ShoppingCart, Trash2, Package, Search, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -102,8 +102,8 @@ export default function ElectricianCart() {
           </h1>
           <p style={{ color: C.muted, fontSize: 14 }}>View electrician cart items and orders</p>
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Export
+        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FileSpreadsheet size={14} /> Export
         </button>
       </div>
 

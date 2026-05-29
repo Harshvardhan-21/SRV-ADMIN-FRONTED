@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { ScanLine, QrCode, Scan } from 'lucide-react';
+import { ScanLine, QrCode, Scan, FileSpreadsheet } from 'lucide-react';
 import { scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -97,7 +97,7 @@ export default function ElectricianScanHistory() {
           </h1>
           <p style={{ color: C.muted, fontSize: 14 }}>View all scan records by electricians</p>
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
 
       <ExportModal

@@ -1,8 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Zap, CheckCircle, FileCheck, ScanLine, Wallet, Gift, CreditCard, Trophy, Landmark } from 'lucide-react';
+import { Zap, FileCheck, ScanLine, Wallet, Gift, CreditCard, Trophy, Landmark } from 'lucide-react';
 import Electricians from './AllElectricians';
-import ElectricianApprovals from './pages/Approvals';
 import ElectricianKYC from './pages/KYC';
 import ElectricianScanHistory from './pages/ScanHistory';
 import ElectricianWallet from './pages/Wallet';
@@ -23,7 +22,6 @@ interface ElectricianHubProps {
 const subPages = [
   { id: 'electricians', label: 'All Electricians', Icon: Zap, description: 'Manage electricians' },
   { id: 'top', label: 'Top Electricians', Icon: Trophy, description: 'Leaderboard' },
-  { id: 'approvals', label: 'Approvals', Icon: CheckCircle, description: 'Review new applications' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
   { id: 'scans', label: 'Scan History', Icon: ScanLine, description: 'View scan records' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },
@@ -34,7 +32,9 @@ const subPages = [
 
 export default function ElectricianHub({ role, defaultPage, onSubPageChange }: ElectricianHubProps) {
   const C = useThemePalette();
-  const [activePage, setActivePage] = useState(defaultPage || 'electricians');
+  const initialPage =
+    defaultPage && subPages.some((page) => page.id === defaultPage) ? defaultPage : 'electricians';
+  const [activePage, setActivePage] = useState(initialPage);
 
   const handlePageChange = (id: string) => {
     setActivePage(id);
@@ -45,7 +45,6 @@ export default function ElectricianHub({ role, defaultPage, onSubPageChange }: E
   const renderPage = () => {
     switch (activePage) {
       case 'electricians': return <Electricians role={role} />;
-      case 'approvals': return <ElectricianApprovals />;
       case 'top': return <TopElectricians />;
       case 'bank': return <ElectricianBankLinked />;
       case 'kyc': return <ElectricianKYC />;

@@ -84,11 +84,18 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
     onClose();
   };
 
+  const icons = {
+    excel: <FileSpreadsheet size={24} />,
+    csv:   <FileText size={24} />,
+    pdf:   <FileText size={24} />,
+    zip:   <Archive size={24} />,
+  };
+
   const opts = [
-    { key: 'excel', label: 'Excel', desc: '.xlsx spreadsheet', icon: '📊', color: '#065F46', bg: '#D1FAE5', bdr: '#6EE7B7' },
-    { key: 'csv',   label: 'CSV',   desc: 'Comma separated',   icon: '📄', color: '#0369A1', bg: '#E0F2FE', bdr: '#7DD3FC' },
-    { key: 'pdf',   label: 'PDF',   desc: 'Printable document', icon: '📋', color: '#B91C1C', bg: '#FEE2E2', bdr: '#FCA5A5' },
-    { key: 'zip',   label: 'ZIP',   desc: 'Excel + CSV bundle', icon: '🗜️', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
+    { key: 'excel', label: 'Excel', desc: '.xlsx spreadsheet', color: '#065F46', bg: '#D1FAE5', bdr: '#6EE7B7' },
+    { key: 'csv',   label: 'CSV',   desc: 'Comma separated',   color: '#0369A1', bg: '#E0F2FE', bdr: '#7DD3FC' },
+    { key: 'pdf',   label: 'PDF',   desc: 'Printable document', color: '#B91C1C', bg: '#FEE2E2', bdr: '#FCA5A5' },
+    { key: 'zip',   label: 'ZIP',   desc: 'Excel + CSV bundle', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
   ];
 
   return (
@@ -127,7 +134,7 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
               onMouseEnter={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = opt.bg; (e.currentTarget as HTMLButtonElement).style.borderColor = opt.bdr; } }}
               onMouseLeave={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; } }}
             >
-              <div style={{ fontSize: 24, marginBottom: 8 }}>{exporting === opt.key ? '⏳' : opt.icon}</div>
+              <div style={{ marginBottom: 8 }}>{exporting === opt.key ? <RefreshCw size={24} /> : icons[opt.key as keyof typeof icons]}</div>
               <div style={{ fontSize: 14, fontWeight: 800, color: exporting === opt.key ? opt.color : C.text }}>{exporting === opt.key ? 'Exporting...' : opt.label}</div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
             </button>

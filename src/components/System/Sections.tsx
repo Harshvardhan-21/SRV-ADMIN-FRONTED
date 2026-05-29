@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { Plus, FileSpreadsheet, FileText, Image } from 'lucide-react';
 import { scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerApi, analyticsApi, productApi } from '@/lib/api';
 import type { PointsConfig, BannerItem } from '@/lib/types';
 import { useTheme, useThemePalette } from '@/lib/theme';
@@ -519,7 +520,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
             <thead>
               <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
                 {['Product', 'SKU', 'Category', 'Current Points', 'Set Points', 'Save'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', width: h === 'SKU' ? 180 : undefined }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -547,7 +548,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
                     </td>
                     {/* SKU */}
                     <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: C.text, background: C.bg, padding: '3px 8px', borderRadius: 6 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: C.text, background: C.bg, padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap' }}>
                         {p.sku || '—'}
                       </span>
                     </td>
@@ -658,7 +659,7 @@ export function AppBanners() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🖼️ App Banners</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional banners displayed in the mobile app</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ Add Banner</button>
+        <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Banner</button>
       </div>
 
       {showForm && (
@@ -969,11 +970,11 @@ export function Reports() {
               <button key={p} onClick={() => setPeriod(p)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${period === p ? C.red : C.border}`, background: period === p ? accentBg : C.card, color: period === p ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>{p}</button>
             ))}
           </div>
-          <button onClick={() => handleExportClick('pdf')} disabled={exporting} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.5 : 1 }}>
-            📄 {exporting ? 'Exporting...' : 'Export PDF'}
+          <button onClick={() => handleExportClick('pdf')} disabled={exporting} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileText size={13} /> {exporting ? 'Exporting...' : 'Export PDF'}
           </button>
-          <button onClick={() => handleExportClick('excel')} disabled={exporting} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.5 : 1 }}>
-            📊 {exporting ? 'Exporting...' : 'Export Excel'}
+          <button onClick={() => handleExportClick('excel')} disabled={exporting} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={13} /> {exporting ? 'Exporting...' : 'Export Excel'}
           </button>
         </div>
       </div>
@@ -1127,7 +1128,7 @@ export function Reports() {
         <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🏆 Top Scanned Products</div>
-            <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>📸 Export</button>
+            <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}><Image size={12} /> Export</button>
           </div>
           {topProducts.map((p, i) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -1150,7 +1151,7 @@ export function Reports() {
         <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🗺️ State-wise Distribution</div>
-            <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>📸 Export</button>
+            <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}><Image size={12} /> Export</button>
           </div>
           {[
             { state: 'Punjab', count: 820, pct: 64 },

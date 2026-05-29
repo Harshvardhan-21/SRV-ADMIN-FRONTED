@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { Users, Award, Eye, Download, IdCard, Phone, MapPin, Building2, Wallet, ScanLine, Star, Pencil } from 'lucide-react';
+import { Users, Award, Eye, FileSpreadsheet, Plus, IdCard, Phone, MapPin, Building2, Wallet, ScanLine, Star, Pencil } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
@@ -633,7 +633,7 @@ export default function AssociatedElectricians() {
           <p style={{ color: C.muted, fontSize: 14 }}>View and manage electricians linked to each dealer with detailed insights</p>
         </div>
         <button onClick={() => setShowAdd(true)} disabled={loading || dealers.length === 0} style={{ background: loading || dealers.length === 0 ? '#ccc' : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: loading || dealers.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-          ＋ Add Electrician
+          <Plus size={14} /> Add Electrician
         </button>
       </div>
 
@@ -677,7 +677,7 @@ export default function AssociatedElectricians() {
           disabled={exportRows.length === 0}
           style={{ background: exportRows.length === 0 ? '#CBD5E1' : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: exportRows.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <Download size={15} />
+          <FileSpreadsheet size={15} />
           Export
         </button>
         <span style={{ fontSize: 12, color: C.muted }}>{visibleDealers.length} dealers found</span>

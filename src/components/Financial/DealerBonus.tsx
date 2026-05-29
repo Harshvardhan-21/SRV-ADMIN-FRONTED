@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Upload, DollarSign, Check, Pencil, Search } from 'lucide-react';
+import { FileSpreadsheet, DollarSign, Check, Pencil, Search } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { financeApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -173,7 +173,7 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
           <option value="processing">Processing</option>
         </select>
         <button onClick={() => setShowExport(true)} style={{ padding: '9px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Upload size={14} /> Export
+          <FileSpreadsheet size={14} /> Export
         </button>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Landmark, Eye, Pencil, Check, X } from 'lucide-react';
+import { Landmark, Eye, Pencil, Check, X, FileSpreadsheet } from 'lucide-react';
 import { counterboyApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { CounterBoy } from '@/lib/types';
@@ -71,7 +71,7 @@ export default function CounterBoyBankLinked() {
 
       <div style={{ background: C.card, borderRadius: 14, padding: '12px 16px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, code..." style={{ ...inputStyle, flex: 1 }} />
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
 
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden' }}>

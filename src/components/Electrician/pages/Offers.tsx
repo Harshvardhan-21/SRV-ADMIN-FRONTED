@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Gift, Plus, Edit, Trash2, Eye, X } from 'lucide-react';
+import { FileSpreadsheet, Gift, Plus, Edit, Trash2, Eye, X } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { offerApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -168,8 +168,8 @@ export default function ElectricianOffers() {
           <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional offers for electricians</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-            Export
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Export
           </button>
           <button onClick={openCreate} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Plus size={16} /> Add Offer

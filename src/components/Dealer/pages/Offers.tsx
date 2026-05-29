@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Gift, Plus, Edit2, Trash2, Calendar, Target } from 'lucide-react';
+import { FileSpreadsheet, Gift, Plus, Edit2, Trash2, Calendar, Target } from 'lucide-react';
 import { offerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -114,7 +114,7 @@ export default function DealerOffers() {
           <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional offers for dealers</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
           <button onClick={openCreate} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}><Plus size={16} /> Create Offer</button>
         </div>
       </div>

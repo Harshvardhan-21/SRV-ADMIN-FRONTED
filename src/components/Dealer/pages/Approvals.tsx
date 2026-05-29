@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle, Check, X, Eye } from 'lucide-react';
+import { CheckCircle, Check, X, Eye, FileSpreadsheet } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -200,9 +200,12 @@ export default function DealerApprovals() {
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          Export
+          <FileSpreadsheet size={14} /> Export
         </button>
       </div>
 

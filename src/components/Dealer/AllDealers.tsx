@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, X, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
-import { dealerApi } from '@/lib/api';
+import { FileSpreadsheet, Plus, Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
+import { dealerApi, financeApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
@@ -30,13 +30,60 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
   suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
-function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; onClose: () => void; onEdit: () => void; permissions: any }) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Failed to update password';
+}
+
+function ViewModal({
+  dealer,
+  onClose,
+  onEdit,
+  permissions,
+  onPasswordSave,
+}: {
+  dealer: Dealer;
+  onClose: () => void;
+  onEdit: () => void;
+  permissions: { canEdit: boolean };
+  onPasswordSave: (password: string) => Promise<void>;
+}) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   const tier = TIER_CONFIG[dealer.tier] ?? TIER_CONFIG['Silver'];
   const status = STATUS_CONFIG[dealer.status] ?? STATUS_CONFIG['inactive'];
-  const linkedElectricians: any[] = [];
+  const linkedElectricians: Array<{ id: string; name: string; subCategory?: string; tier?: string }> = [];
   const progress = Math.min(100, (dealer.electricianCount / tier.max) * 100);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handlePasswordSubmit = async () => {
+    const nextPassword = password.trim();
+    const nextConfirmPassword = confirmPassword.trim();
+
+    if (!nextPassword) {
+      setPasswordFeedback({ type: 'error', message: 'Enter a new password first.' });
+      return;
+    }
+
+    if (nextPassword !== nextConfirmPassword) {
+      setPasswordFeedback({ type: 'error', message: 'New password and confirm password must match.' });
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await onPasswordSave(nextPassword);
+      setPassword('');
+      setConfirmPassword('');
+      setPasswordFeedback({ type: 'success', message: `Password ${dealer.hasPassword ? 'reset' : 'set'} successfully.` });
+    } catch (error: unknown) {
+      setPasswordFeedback({ type: 'error', message: getErrorMessage(error) });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   return (
     <div
@@ -73,8 +120,8 @@ function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; o
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 22 }}>
             {[
               { label: 'Electricians', value: dealer.electricianCount, Icon: Zap },
-              { label: 'Monthly Target', value: `₹${((dealer.monthlyTarget??0)/1000).toFixed(0)}K`, Icon: Target },
-              { label: 'Achieved', value: `₹${((dealer.achievedTarget??0)/1000).toFixed(0)}K`, Icon: Check },
+              { label: 'Dealer Bonus', value: `₹${Number(dealer.bonusPoints ?? 0).toLocaleString('en-IN')}`, Icon: Target },
+              { label: 'Bonus Status', value: String(dealer.bonusStatus ?? 'pending').replace(/^\w/, (match) => match.toUpperCase()), Icon: CheckCircle },
             ].map((s, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4, color: C.muted }}><s.Icon size={20} /></div>
@@ -115,6 +162,55 @@ function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; o
             <div style={{ fontSize: 13, color: C.text }}>{dealer.address}</div>
           </div>
 
+          <div style={{ background: C.bg, borderRadius: 14, padding: '16px 16px 18px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>App Password</div>
+                <div style={{ fontSize: 13, color: C.text }}>
+                  Password status: <strong>{dealer.hasPassword ? 'Set' : 'Not set'}</strong>
+                </div>
+              </div>
+              <span style={{ background: dealer.hasPassword ? '#D1FAE5' : '#FEF3C7', color: dealer.hasPassword ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999 }}>
+                {dealer.hasPassword ? 'Password Active' : 'Needs Password'}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: permissions.canEdit ? 14 : 0 }}>
+              For security, the current password cannot be viewed here. You can set or reset it from this panel.
+            </div>
+            {permissions.canEdit && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="New password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirm password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                </div>
+                {passwordFeedback && (
+                  <div style={{ marginBottom: 12, fontSize: 12, fontWeight: 600, color: passwordFeedback.type === 'success' ? '#065F46' : '#B91C1C' }}>
+                    {passwordFeedback.message}
+                  </div>
+                )}
+                <button
+                  onClick={() => { void handlePasswordSubmit(); }}
+                  disabled={savingPassword}
+                  style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '11px 16px', fontSize: 13, fontWeight: 700, cursor: savingPassword ? 'wait' : 'pointer', opacity: savingPassword ? 0.75 : 1 }}
+                >
+                  {savingPassword ? 'Saving Password...' : dealer.hasPassword ? 'Reset Password' : 'Set Password'}
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Linked Electricians */}
           {linkedElectricians.length > 0 && (
             <div style={{ marginBottom: 20 }}>
@@ -152,7 +248,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
   const isAdd = !dealer;
   const [form, setForm] = useState<Partial<Dealer>>(dealer ?? {
     name: '', profileImage: '', phone: '', email: '', dealerCode: '', town: '', district: '', state: '', address: '', pincode: '',
-    tier: 'Silver', status: 'active', gstNumber: '', bankLinked: false, upiId: '', monthlyTarget: 0, achievedTarget: 0, contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
+    tier: 'Silver', status: 'active', gstNumber: '', bankLinked: false, upiId: '', bonusPoints: 0, bonusStatus: 'pending', contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
     salesManName: '', townCode: '', rtoCode: '', listCode: '', electricianList: '',
   });
   const f = (k: keyof Dealer, v: unknown) => setForm(p => ({ ...p, [k]: v }));
@@ -269,10 +365,13 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
                 <option value="yes">Yes</option><option value="no">No</option>
               </select>
             </div>
-            <div><label style={labelStyle}>Monthly Target (₹)</label><input style={inputStyle} type="number" value={form.monthlyTarget ?? ''} onChange={e => f('monthlyTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
-            {!isAdd && (
-              <div><label style={labelStyle}>Achieved Target (₹)</label><input style={inputStyle} type="number" value={form.achievedTarget ?? ''} onChange={e => f('achievedTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
-            )}
+            <div><label style={labelStyle}>Dealer Bonus (₹)</label><input style={inputStyle} type="number" min={0} value={form.bonusPoints ?? ''} onChange={e => f('bonusPoints', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
+            <div><label style={labelStyle}>Bonus Status</label>
+              <select style={inputStyle} value={form.bonusStatus ?? 'pending'} onChange={e => f('bonusStatus', e.target.value)}>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
 
           </div>
 
@@ -471,22 +570,22 @@ export default function Dealers({ role }: DealersProps) {
       upiId: form.upiId && form.upiId.trim() !== '' ? form.upiId : undefined,
       profileImage: form.profileImage && form.profileImage.trim() !== '' ? form.profileImage : undefined,
       bankLinked: form.bankLinked,
-      monthlyTarget: typeof form.monthlyTarget === 'number' ? form.monthlyTarget : undefined,
       salesManName: form.salesManName && form.salesManName.trim() !== '' ? form.salesManName : undefined,
       townCode: form.townCode && form.townCode.trim() !== '' ? form.townCode : undefined,
       rtoCode: form.rtoCode && form.rtoCode.trim() !== '' ? form.rtoCode : undefined,
       listCode: form.listCode && form.listCode.trim() !== '' ? form.listCode : undefined,
       electricianList: form.electricianList && form.electricianList.trim() !== '' ? form.electricianList : undefined,
     };
-    if (!showAdd) {
-      (dealerData as any).achievedTarget = typeof form.achievedTarget === 'number' ? form.achievedTarget : undefined;
-    }
     try {
       if (showAdd) {
         await dealerApi.create(dealerData);
         setShowAdd(false);
       } else {
         await dealerApi.update(editing!.id, dealerData);
+        await financeApi.updateDealerBonus(editing!.id, {
+          bonusPoints: typeof form.bonusPoints === 'number' ? form.bonusPoints : 0,
+          bonusStatus: form.bonusStatus ?? 'pending',
+        });
         setEditing(undefined);
       }
       await loadData(currentPage);
@@ -511,9 +610,18 @@ export default function Dealers({ role }: DealersProps) {
     }
   };
 
+  const handlePasswordSave = async (password: string) => {
+    if (!viewing) return;
+
+    const updated = await dealerApi.setPassword(viewing.id, password);
+    setViewing(updated);
+    setData((current) => current.map((item) => (item.id === updated.id ? { ...item, hasPassword: updated.hasPassword } : item)));
+    setAlertDialog({ show: true, title: 'Password Updated', message: 'Dealer app password saved successfully.', type: 'success' });
+  };
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      {viewing && <ViewModal dealer={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} />}
+      {viewing && <ViewModal dealer={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} onPasswordSave={handlePasswordSave} />}
       {((editing !== undefined && permissions.canEdit) || (showAdd && permissions.canCreate)) && <EditModal dealer={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} />}
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
       {deleteConfirm.show && <ConfirmDialog show={deleteConfirm.show} title="Delete Dealer" message={`Are you sure you want to delete this dealer? This action cannot be undone.`} confirmText="Delete" type="danger" onConfirm={confirmDelete} onCancel={() => setDeleteConfirm({ show: false, id: null })} />}
@@ -524,14 +632,14 @@ export default function Dealers({ role }: DealersProps) {
           <p style={{ color: C.muted, fontSize: 14 }}>Manage dealer network, tiers, targets and linked electricians</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            📤 Export
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Export
           </button>
-          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            📥 Import
+          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Import
           </button>
           {permissions.canCreate && (
-            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Dealer</button>
+            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Dealer</button>
           )}
         </div>
       </div>
@@ -552,8 +660,8 @@ export default function Dealers({ role }: DealersProps) {
           Tier: d.tier,
           Status: d.status,
           ElectricianCount: d.electricianCount,
-          MonthlyTarget: d.monthlyTarget ?? 0,
-          AchievedTarget: d.achievedTarget ?? 0,
+          DealerBonus: d.bonusPoints ?? 0,
+          BonusStatus: d.bonusStatus ?? 'pending',
           GSTNumber: d.gstNumber ?? '',
           BankLinked: d.bankLinked ? 'Yes' : 'No',
           JoinedDate: new Date(d.joinedDate).toLocaleDateString('en-IN'),

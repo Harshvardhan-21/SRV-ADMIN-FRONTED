@@ -1,10 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { Users, Trophy, FileCheck, ScanLine, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
+import { Users, Trophy, FileCheck, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
 import AllCounterBoys from './AllCounterBoys';
 import TopCounterBoys from './pages/TopCounterBoys';
 import CounterBoyKYC from './pages/KYC';
-import CounterBoyScanHistory from './pages/ScanHistory';
 import CounterBoyWallet from './pages/Wallet';
 import CounterBoyOffers from './pages/Offers';
 import CounterBoyFinance from './pages/Finance';
@@ -22,7 +21,6 @@ const subPages = [
   { id: 'counterboys', label: 'All Counter Boys', Icon: Users, description: 'Manage counter staff' },
   { id: 'top', label: 'Top Counter Boys', Icon: Trophy, description: 'Leaderboard' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
-  { id: 'scans', label: 'Scan History', Icon: ScanLine, description: 'View scan records' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },
   { id: 'offers', label: 'Offers', Icon: Gift, description: 'Manage promotions' },
   { id: 'finance', label: 'Finance', Icon: CreditCard, description: 'Wallet and redemptions' },
@@ -31,7 +29,9 @@ const subPages = [
 
 export default function CounterBoyHub({ role, defaultPage, onSubPageChange }: CounterBoyHubProps) {
   const C = useThemePalette();
-  const [activePage, setActivePage] = useState(defaultPage || 'counterboys');
+  const initialPage =
+    defaultPage && subPages.some((page) => page.id === defaultPage) ? defaultPage : 'counterboys';
+  const [activePage, setActivePage] = useState(initialPage);
 
   const handlePageChange = (id: string) => {
     setActivePage(id);
@@ -44,7 +44,6 @@ export default function CounterBoyHub({ role, defaultPage, onSubPageChange }: Co
       case 'counterboys': return <AllCounterBoys role={role} />;
       case 'top': return <TopCounterBoys />;
       case 'kyc': return <CounterBoyKYC />;
-      case 'scans': return <CounterBoyScanHistory />;
       case 'wallet': return <CounterBoyWallet />;
       case 'offers': return <CounterBoyOffers />;
       case 'finance': return <CounterBoyFinance />;

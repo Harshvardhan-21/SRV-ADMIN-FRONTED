@@ -28,7 +28,7 @@ export default function CounterBoyWallet() {
       exportTitle="Counter Boy Wallet"
       exportFileName="counterboy-wallet"
       fetchUserMeta={fetchUserMeta}
-      showScanTab={true}
+      showScanTab={false}
     />
   );
 }

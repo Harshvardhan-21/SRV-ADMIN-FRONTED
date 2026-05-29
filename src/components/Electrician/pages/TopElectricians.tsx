@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Trophy, TrendingUp, Calendar } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, FileSpreadsheet } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { MemberTier } from '@/lib/types';
@@ -105,7 +105,7 @@ export default function TopElectricians() {
           onClick={() => setShowExport(true)}
           style={{ background: 'rgba(255,255,255,0.2)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          📤 Export
+          <FileSpreadsheet size={14} /> Export
         </button>
       </div>
 

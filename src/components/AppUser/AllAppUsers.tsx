@@ -1,6 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Eye, Pencil, RefreshCw, Search, Trash2, Users, Wallet } from 'lucide-react';
+import { Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, Search, Trash2, Users, Wallet } from 'lucide-react';
 import { appUserApi } from '@/lib/api';
 import type { AdminRole, AppUser, MemberTier, UserStatus } from '@/lib/types';
 import { useAppContext } from '@/lib/appContext';
@@ -37,11 +37,54 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Failed to save customer';
 }
 
-function ViewModal({ user, onClose, onEdit, canEdit }: { user: AppUser; onClose: () => void; onEdit: () => void; canEdit: boolean }) {
+function ViewModal({
+  user,
+  onClose,
+  onEdit,
+  canEdit,
+  onPasswordSave,
+}: {
+  user: AppUser;
+  onClose: () => void;
+  onEdit: () => void;
+  canEdit: boolean;
+  onPasswordSave: (password: string) => Promise<void>;
+}) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   const status = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.pending;
   const tier = TIER_CONFIG[user.tier] ?? TIER_CONFIG.Silver;
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handlePasswordSubmit = async () => {
+    const nextPassword = password.trim();
+    const nextConfirmPassword = confirmPassword.trim();
+
+    if (!nextPassword) {
+      setPasswordFeedback({ type: 'error', message: 'Enter a new password first.' });
+      return;
+    }
+
+    if (nextPassword !== nextConfirmPassword) {
+      setPasswordFeedback({ type: 'error', message: 'New password and confirm password must match.' });
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await onPasswordSave(nextPassword);
+      setPassword('');
+      setConfirmPassword('');
+      setPasswordFeedback({ type: 'success', message: `Password ${user.hasPassword ? 'reset' : 'set'} successfully.` });
+    } catch (error: unknown) {
+      setPasswordFeedback({ type: 'error', message: getErrorMessage(error) });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   return (
     <div
@@ -116,6 +159,55 @@ function ViewModal({ user, onClose, onEdit, canEdit }: { user: AppUser; onClose:
           <div style={{ background: C.bg, borderRadius: 10, padding: '12px 14px', marginBottom: 18 }}>
             <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 700 }}>Address</div>
             <div style={{ fontSize: 13, color: C.text }}>{user.address || '-'}</div>
+          </div>
+
+          <div style={{ background: C.bg, borderRadius: 14, padding: '16px 16px 18px', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>App Password</div>
+                <div style={{ fontSize: 13, color: C.text }}>
+                  Password status: <strong>{user.hasPassword ? 'Set' : 'Not set'}</strong>
+                </div>
+              </div>
+              <span style={{ background: user.hasPassword ? '#D1FAE5' : '#FEF3C7', color: user.hasPassword ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999 }}>
+                {user.hasPassword ? 'Password Active' : 'Needs Password'}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: canEdit ? 14 : 0 }}>
+              For security, the current password cannot be viewed here. You can set or reset it from this panel.
+            </div>
+            {canEdit && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="New password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirm password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                </div>
+                {passwordFeedback && (
+                  <div style={{ marginBottom: 12, fontSize: 12, fontWeight: 600, color: passwordFeedback.type === 'success' ? '#065F46' : '#B91C1C' }}>
+                    {passwordFeedback.message}
+                  </div>
+                )}
+                <button
+                  onClick={() => { void handlePasswordSubmit(); }}
+                  disabled={savingPassword}
+                  style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '11px 16px', fontSize: 13, fontWeight: 700, cursor: savingPassword ? 'wait' : 'pointer', opacity: savingPassword ? 0.75 : 1 }}
+                >
+                  {savingPassword ? 'Saving Password...' : user.hasPassword ? 'Reset Password' : 'Set Password'}
+                </button>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
@@ -414,6 +506,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
     try {
       const isEditing = Boolean(editing);
       const payload = { ...form };
+      delete payload.hasPassword;
       const userCode = payload.userCode?.trim();
       if (userCode) {
         payload.userCode = userCode;
@@ -452,9 +545,18 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const totalPages = Math.ceil(total / LIMIT);
   void role;
 
+  const handlePasswordSave = async (password: string) => {
+    if (!viewing) return;
+
+    const updated = await appUserApi.setPassword(viewing.id, password);
+    setViewing(updated);
+    setUsers((current) => current.map((item) => (item.id === updated.id ? { ...item, hasPassword: updated.hasPassword } : item)));
+    setAlert({ show: true, type: 'success', title: 'Password Updated', message: 'Customer app password saved successfully.' });
+  };
+
   return (
     <div style={{ padding: 32, background: C.bg, minHeight: '100vh' }}>
-      {viewing && <ViewModal user={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} />}
+      {viewing && <ViewModal user={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} onPasswordSave={handlePasswordSave} />}
       {editing && <EditModal user={editing} onClose={() => setEditing(null)} onSave={handleSave} />}
       {showAdd && <EditModal user={null} onClose={() => setShowAdd(false)} onSave={handleSave} />}
       {alert.show && (
@@ -519,18 +621,18 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {canExport && (
-            <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Export
+            <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FileSpreadsheet size={14} /> Export
             </button>
           )}
           {canExport && (
-            <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Import
+            <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FileSpreadsheet size={14} /> Import
             </button>
           )}
           {canCreate && (
-            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Add Customer
+            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={14} /> Add Customer
             </button>
           )}
         </div>

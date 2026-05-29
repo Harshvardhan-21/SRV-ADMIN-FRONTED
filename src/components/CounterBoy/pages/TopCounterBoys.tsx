@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Trophy, TrendingUp } from 'lucide-react';
+import { Trophy, TrendingUp, FileSpreadsheet } from 'lucide-react';
 import { counterboyApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { CounterBoy } from '@/lib/types';
@@ -40,7 +40,7 @@ export default function TopCounterBoys() {
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}><Trophy size={26} /> Top Counter Boys</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 4 }}>Top 10 active counter staff by {sortBy}</div>
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
 
       <div style={{ background: C.card, borderRadius: 14, padding: '16px 20px', border: `1px solid ${C.border}`, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

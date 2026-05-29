@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal } from 'lucide-react';
+import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import type { Electrician, MemberTier } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
@@ -278,7 +278,7 @@ export default function ElectricianBankLinked() {
             </div>
           )}
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
         <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {data.length}</span>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Gift, Plus, Trash2, Upload, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package } from 'lucide-react';
+import { Gift, Plus, Trash2, FileSpreadsheet, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -309,7 +309,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>Export</button>
+          <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
           {canCreate && <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={15} /> Add Gift</button>}
         </div>
       </div>

@@ -1,6 +1,6 @@
  'use client';
 import { useState, useEffect, useRef } from 'react';
-import { FileCheck, Eye, Check, X, Search, Upload, ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { FileCheck, Eye, Check, X, Search, Upload, ImageIcon, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -284,7 +284,7 @@ export default function KYCManagement() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><FileCheck size={24} style={{ color: C.red }} /> KYC Management</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Verify and manage dealer KYC documents</p>
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer KYC" fileName="dealer-kyc" getData={() => documents.map(d => ({ Dealer: d.dealerName, Code: d.dealerCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '', GST: d.gstNumber ?? '' }))} />
 

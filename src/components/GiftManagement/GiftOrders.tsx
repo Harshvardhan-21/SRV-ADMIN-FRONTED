@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User } from 'lucide-react';
+import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi, redemptionApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -173,7 +173,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
             </button>
           ))}
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
 
       {/* Search + Filter */}

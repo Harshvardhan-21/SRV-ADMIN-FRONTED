@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { FileCheck, Eye, Check, X, Upload, ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { FileCheck, Eye, Check, X, Upload, ImageIcon, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
 import { appUserApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { AppUser } from '@/lib/types';
@@ -323,7 +323,7 @@ export default function UserKYC() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><FileCheck size={24} style={{ color: C.red }} /> KYC Management</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Verify and manage customer Aadhaar KYC documents</p>
         </div>
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Export</button>
+        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="User KYC" fileName="user-kyc" getData={() => documents.map(item => ({ Name: item.name, Code: item.userCode, KYCStatus: item.kycStatus, AadhaarImage: item.aadharFrontImage ?? '' }))} />
 

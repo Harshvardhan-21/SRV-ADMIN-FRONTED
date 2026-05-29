@@ -167,6 +167,8 @@ export const electricianApi = {
   getOne: (id: string) => request<any>(`/electricians/${id}`),
   create: (body: object) => request<any>('/electricians', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  setPassword: (id: string, password: string) =>
+    request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify({ password }) }),
   delete: (id: string) => request<void>(`/electricians/${id}`, { method: 'DELETE' }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/electricians/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
@@ -197,6 +199,8 @@ export const dealerApi = {
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  setPassword: (id: string, password: string) =>
+    request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify({ password }) }),
   delete: (id: string) => request<void>(`/dealers/${id}`, { method: 'DELETE' }),
   updateStatus: (id: string, status: string, rejectionReason?: string) =>
     request<any>(`/dealers/${id}/status`, {
@@ -459,6 +463,8 @@ export const appUserApi = {
   getOne: (id: string) => request<any>(`/app-users/${id}`),
   create: (body: object) => request<any>('/app-users', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/app-users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  setPassword: (id: string, password: string) =>
+    request<any>(`/app-users/${id}`, { method: 'PATCH', body: JSON.stringify({ password }) }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/app-users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: string) => request<void>(`/app-users/${id}`, { method: 'DELETE' }),
@@ -485,6 +491,8 @@ export const counterboyApi = {
   getOne: (id: string) => request<any>(`/counterboys/${id}`),
   create: (body: object) => request<any>('/counterboys', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/counterboys/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  setPassword: (id: string, password: string) =>
+    request<any>(`/counterboys/${id}`, { method: 'PATCH', body: JSON.stringify({ password }) }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/counterboys/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: string) => request<void>(`/counterboys/${id}`, { method: 'DELETE' }),

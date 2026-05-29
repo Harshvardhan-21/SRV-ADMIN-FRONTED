@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Banknote, Check, CreditCard, DollarSign, Eye, TrendingUp, X } from 'lucide-react';
+import { Banknote, Check, CreditCard, DollarSign, Eye, FileSpreadsheet, TrendingUp, X } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -233,9 +233,9 @@ export default function RoleRedemptionRequestsPage({
         />
         <button
           onClick={() => setShowExport(true)}
-          style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          Export
+          <FileSpreadsheet size={14} /> Export
         </button>
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
       </div>

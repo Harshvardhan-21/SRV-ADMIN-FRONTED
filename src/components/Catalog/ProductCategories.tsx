@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, Upload, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, FileSpreadsheet, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -319,7 +319,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
             display: 'flex', alignItems: 'center', gap: 6,
           }}
         >
-          <Upload size={14} /> Export
+          <FileSpreadsheet size={14} /> Export
         </button>
         <button
           onClick={openAdd}

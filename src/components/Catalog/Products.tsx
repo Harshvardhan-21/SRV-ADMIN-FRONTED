@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Package, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
+import { Package, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
 import type { Product, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
@@ -441,7 +441,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           <p style={{ color: C.muted, fontSize: 14 }}>Manage product catalog, points and stock levels</p>
         </div>
         {canCreate && (
-          <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>＋ Add Product</button>
+          <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Product</button>
         )}
       </div>
 
@@ -550,7 +550,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
               {['Product','SKU Code','Category','Price','Points','Stock','Scanned','Status','Actions'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: h === 'SKU Code' ? '12px 8px 12px 12px' : '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', width: h === 'SKU Code' ? 180 : undefined }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -575,7 +575,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: '12px 8px 12px 12px', fontSize: 12, color: C.muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.sku ? p.sku.replace(/^SRV-/, '') : '—'}</td>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.sku ? p.sku.replace(/^SRV-/, '') : '—'}</td>
                 <td style={{ padding: '12px 16px', fontSize: 12.5, color: C.muted }}>{p.category}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{p.price}</div>

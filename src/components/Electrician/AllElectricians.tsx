@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
+import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -29,11 +29,59 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
   suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
-function ViewModal({ el, onClose, onEdit, permissions }: { el: Electrician; onClose: () => void; onEdit: () => void; permissions: any }) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Failed to update password';
+}
+
+function ViewModal({
+  el,
+  onClose,
+  onEdit,
+  permissions,
+  onPasswordSave,
+}: {
+  el: Electrician;
+  onClose: () => void;
+  onEdit: () => void;
+  permissions: { canEdit: boolean };
+  onPasswordSave: (password: string) => Promise<void>;
+}) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   const tier = TIER_CONFIG[el.tier];
   const status = STATUS_CONFIG[el.status];
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handlePasswordSubmit = async () => {
+    const nextPassword = password.trim();
+    const nextConfirmPassword = confirmPassword.trim();
+
+    if (!nextPassword) {
+      setPasswordFeedback({ type: 'error', message: 'Enter a new password first.' });
+      return;
+    }
+
+    if (nextPassword !== nextConfirmPassword) {
+      setPasswordFeedback({ type: 'error', message: 'New password and confirm password must match.' });
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await onPasswordSave(nextPassword);
+      setPassword('');
+      setConfirmPassword('');
+      setPasswordFeedback({ type: 'success', message: `Password ${el.hasPassword ? 'reset' : 'set'} successfully.` });
+    } catch (error: unknown) {
+      setPasswordFeedback({ type: 'error', message: getErrorMessage(error) });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -90,17 +138,67 @@ function ViewModal({ el, onClose, onEdit, permissions }: { el: Electrician; onCl
               { label: 'City', value: el.city }, { label: 'District', value: el.district },
               { label: 'State', value: el.state }, { label: 'Dealer', value: el.dealerName },
               { label: 'Email', value: el.email || '—' },
-              { label: 'Dealer ID', value: el.dealerId ? el.dealerId.toUpperCase() : '—' },
+              { label: 'Electrician Code', value: el.electricianCode },
               { label: 'Joined', value: new Date(el.joinedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
               { label: 'Category', value: 'Electrician' },
               { label: 'UPI ID', value: el.upiId || '—' },
               { label: 'Total Redemptions', value: el.totalRedemptions },
+              { label: 'Last Active', value: el.recentActivity || '—' },
             ].map((d, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 2, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>{d.label}</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{String(d.value)}</div>
               </div>
             ))}
+          </div>
+
+          <div style={{ background: C.bg, borderRadius: 14, padding: '16px 16px 18px', marginBottom: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>App Password</div>
+                <div style={{ fontSize: 13, color: C.text }}>
+                  Password status: <strong>{el.hasPassword ? 'Set' : 'Not set'}</strong>
+                </div>
+              </div>
+              <span style={{ background: el.hasPassword ? '#D1FAE5' : '#FEF3C7', color: el.hasPassword ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999 }}>
+                {el.hasPassword ? 'Password Active' : 'Needs Password'}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: permissions.canEdit ? 14 : 0 }}>
+              For security, the current password cannot be viewed here. You can set or reset it from this panel.
+            </div>
+            {permissions.canEdit && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="New password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirm password"
+                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
+                  />
+                </div>
+                {passwordFeedback && (
+                  <div style={{ marginBottom: 12, fontSize: 12, fontWeight: 600, color: passwordFeedback.type === 'success' ? '#065F46' : '#B91C1C' }}>
+                    {passwordFeedback.message}
+                  </div>
+                )}
+                <button
+                  onClick={() => { void handlePasswordSubmit(); }}
+                  disabled={savingPassword}
+                  style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '11px 16px', fontSize: 13, fontWeight: 700, cursor: savingPassword ? 'wait' : 'pointer', opacity: savingPassword ? 0.75 : 1 }}
+                >
+                  {savingPassword ? 'Saving Password...' : el.hasPassword ? 'Reset Password' : 'Set Password'}
+                </button>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
@@ -327,6 +425,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
 export default function Electricians({ role }: ElectriciansProps) {
   const C = useThemePalette();
   const [data, setData] = useState<Electrician[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [dealers, setDealers] = useState<{ id: string; name: string; dealerCode: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -418,6 +517,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         }
       }
 
+      setLoadError(null);
       const [elecRes, dealRes] = await Promise.all([
         electricianApi.getAll(params),
         dealerApi.getAll({ limit: '500' }),
@@ -435,8 +535,9 @@ export default function Electricians({ role }: ElectriciansProps) {
         dealerName: e.dealerName ?? e.dealer?.name ?? (e.dealerId ? dealerMap.get(e.dealerId) : null) ?? '—',
         recentActivity: e.recentActivity ?? e.lastActivityAt ?? 'N/A',
       })));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load electricians:', err);
+      setLoadError(err?.message?.includes('fetch') ? 'Unable to reach server. Ensure the backend is running on port 3001.' : err?.message || 'Failed to load electricians');
     } finally {
       setLoading(false);
     }
@@ -556,9 +657,26 @@ export default function Electricians({ role }: ElectriciansProps) {
     }
   };
 
+  const handlePasswordSave = async (password: string) => {
+    if (!viewing) return;
+
+    const updated = await electricianApi.setPassword(viewing.id, password);
+    setViewing({
+      ...updated,
+      dealerName: updated.dealerName ?? updated.dealer?.name ?? viewing.dealerName ?? '—',
+      recentActivity: updated.recentActivity ?? updated.lastActivityAt ?? viewing.recentActivity ?? 'N/A',
+    });
+    setData((current) =>
+      current.map((item) =>
+        item.id === updated.id ? { ...item, hasPassword: updated.hasPassword } : item,
+      ),
+    );
+    setAlertDialog({ show: true, title: 'Password Updated', message: 'Electrician app password saved successfully.', type: 'success' });
+  };
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      {viewing && <ViewModal el={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} />}
+      {viewing && <ViewModal el={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} onPasswordSave={handlePasswordSave} />}
       {(editing !== undefined || showAdd) && (
         <EditModal el={showAdd ? null : editing!} dealers={dealers} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} />
       )}
@@ -570,15 +688,15 @@ export default function Electricians({ role }: ElectriciansProps) {
           <p style={{ color: C.muted, fontSize: 14 }}>Manage all registered electricians, tiers and points</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            📤 Export
+          <button onClick={() => setShowExport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Export
           </button>
-          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            📥 Import
+          <button onClick={() => setShowImport(true)} style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Import
           </button>
           {permissions.canCreate && (
             <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              ＋ Add Electrician
+              <Plus size={14} /> Add Electrician
             </button>
           )}
         </div>
@@ -758,13 +876,22 @@ export default function Electricians({ role }: ElectriciansProps) {
         <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
       </div>
 
+      {/* Error banner */}
+      {loadError && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ flex: 1, fontSize: 13, color: '#991B1B', fontWeight: 600 }}>{loadError}</span>
+          <button onClick={() => { setLoadError(null); loadData(currentPage); }} style={{ background: '#DC2626', color: 'white', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Retry</button>
+        </div>
+      )}
+
       {/* Table */}
       {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading electricians...</div>}
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1120 }}>
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','Last Active','Actions'].map(h => (
+              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','Actions'].map(h => (
                 <th
                   key={h}
                   style={{
@@ -815,7 +942,6 @@ export default function Electricians({ role }: ElectriciansProps) {
                   <td style={{ padding: '13px 14px' }}>
                     <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span>
                   </td>
-                  <td style={{ padding: '13px 14px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{e.recentActivity}</td>
                   <td style={{ padding: '13px 14px', minWidth: 190, width: 190 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>View</button>

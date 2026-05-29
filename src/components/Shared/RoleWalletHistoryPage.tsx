@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Eye, Pencil, QrCode, Gift, CreditCard, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Eye, FileSpreadsheet, Pencil, QrCode, Gift, CreditCard, Wallet } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi, walletApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -313,8 +313,8 @@ export default function RoleWalletHistoryPage({
             </h1>
             <p style={{ color: C.muted, fontSize: 14 }}>{subtitle}</p>
           </div>
-          <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Export
+          <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={14} /> Export
           </button>
         </div>
       )}
@@ -389,8 +389,8 @@ export default function RoleWalletHistoryPage({
           <option value="debit">Debit</option>
         </select>
         {!showHeader && (
-          <button onClick={() => setShowExport(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Export
+          <button onClick={() => setShowExport(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileSpreadsheet size={13} /> Export
           </button>
         )}
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
