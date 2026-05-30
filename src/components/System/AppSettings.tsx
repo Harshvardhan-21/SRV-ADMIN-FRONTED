@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Smartphone, Save, ToggleLeft, ToggleRight, Bell, Star, Gift, Shield, Globe, Zap } from 'lucide-react';
+import { Smartphone, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { electricianApi, dealerApi, settingsApi } from '@/lib/api';
+import AppIcons from './AppIcons';
 
 interface AppConfig {
   // App Info
@@ -251,15 +252,16 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   );
 
   const sections = [
-    { id: 'app', label: '📱 App Info', Icon: Smartphone },
-    { id: 'support', label: '📞 Support', Icon: Bell },
-    { id: 'points', label: '⭐ Points', Icon: Star },
-    { id: 'tiers', label: '🏅 Tiers', Icon: Zap },
-    { id: 'features', label: '🔧 Features', Icon: Shield },
-    { id: 'links', label: '🔗 Links', Icon: Globe },
-    { id: 'rateus', label: '⭐ Rate Us', Icon: Star },
-    { id: 'catalog', label: '📄 Catalog PDF', Icon: Globe },
-    { id: 'notifications', label: '🔔 Push Notifications', Icon: Bell },
+    { id: 'app', label: 'App Info', Icon: Info },
+    { id: 'support', label: 'Support', Icon: Headphones },
+    { id: 'points', label: 'Points', Icon: Award },
+    { id: 'tiers', label: 'Tiers', Icon: Medal },
+    { id: 'features', label: 'Features', Icon: SlidersHorizontal },
+    { id: 'links', label: 'Links', Icon: Link2 },
+    { id: 'rateus', label: 'Rate Us', Icon: ThumbsUp },
+    { id: 'catalog', label: 'Catalog PDF', Icon: FileText },
+    { id: 'notifications', label: 'Push Notifications', Icon: Bell },
+    { id: 'app-icons', label: 'App Icons', Icon: ImageIcon },
   ];
 
   return (
@@ -298,11 +300,15 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
       <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 20, alignItems: 'start' }}>
         {/* Left Nav */}
         <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: C.shadow }}>
-          {sections.map(s => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)} style={{ width: '100%', padding: '12px 16px', border: 'none', background: activeSection === s.id ? '#7C3AED' : 'transparent', color: activeSection === s.id ? '#fff' : C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left', borderBottom: `1px solid ${C.border}` }}>
-              {s.label}
-            </button>
-          ))}
+          {sections.map(s => {
+            const I = s.Icon;
+            return (
+              <button key={s.id} onClick={() => setActiveSection(s.id)} style={{ width: '100%', padding: '12px 16px', border: 'none', background: activeSection === s.id ? '#7C3AED' : 'transparent', color: activeSection === s.id ? '#fff' : C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <I size={16} />
+                {s.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Right Content */}
@@ -343,6 +349,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                   <div><label style={lbl}>Maintenance Message</label><input style={inp} value={config.maintenanceMessage} onChange={e => f('maintenanceMessage', e.target.value)} /></div>
                 )}
               </div>
+
+
             </div>
           )}
 
@@ -759,6 +767,10 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 </div>
               </div>
             </div>
+          )}
+
+          {activeSection === 'app-icons' && (
+            <AppIcons role={role} />
           )}
 
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>

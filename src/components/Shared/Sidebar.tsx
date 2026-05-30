@@ -7,7 +7,7 @@ import {
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageSquare, FileText,
-  UserCheck, Shield, Smartphone, Play, AppWindow, Activity,
+  UserCheck, Shield, Smartphone, Play, Activity,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -86,7 +86,6 @@ const NAV_GROUPS = [
       { id: 'admin-settings', label: 'Admin Settings', Icon: Shield },
       { id: 'app-settings', label: 'App Settings', Icon: Smartphone },
       { id: 'app-page-controls', label: 'App Page Controls', Icon: Smartphone },
-      { id: 'app-icons', label: 'App Icons', Icon: AppWindow },
     ]
   },
 ];
@@ -229,7 +228,7 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
             )}
             {group.items.filter(item => {
               // These items only visible to super_admin
-              if (['admin-settings', 'app-settings', 'app-page-controls', 'app-icons'].includes(item.id)) {
+              if (['admin-settings', 'app-settings', 'app-page-controls'].includes(item.id)) {
                 return role === 'super_admin';
               }
               return true;

@@ -35,7 +35,6 @@ const EnquirySupport     = lazy(() => import('@/components/Support/EnquirySuppor
 const AdminSettings      = lazy(() => import('@/components/System/AdminSettings'));
 const AppSettings        = lazy(() => import('@/components/System/AppSettings'));
 const AppPageControls    = lazy(() => import('@/components/System/AppPageControls'));
-const AppIcons           = lazy(() => import('@/components/System/AppIcons'));
 // Sections exports multiple named exports — wrap each individually
 const PointsConfig       = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.PointsConfig })));
 const Reports            = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.Reports })));
@@ -69,7 +68,6 @@ const preloadPageChunk = (id: string) => {
     case 'admin-settings': return import('@/components/System/AdminSettings');
     case 'app-settings': return import('@/components/System/AppSettings');
     case 'app-page-controls': return import('@/components/System/AppPageControls');
-    case 'app-icons': return import('@/components/System/AppIcons');
     case 'points-config': return import('@/components/System/Sections');
     case 'reports': return import('@/components/System/Sections');
     case 'scans': return import('@/components/System/Sections');
@@ -164,7 +162,6 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   redemptions: { title: 'Redemptions', Icon: Gift },
   reports: { title: 'Reports', Icon: BarChart2 },
   'app-page-controls': { title: 'App Page Controls', Icon: Smartphone },
-  'app-icons': { title: 'App Icons', Icon: Smartphone },
   };
 
 export default function Home() {
@@ -510,7 +507,7 @@ export default function Home() {
       case 'admin-settings': return role === 'super_admin' ? <AdminSettings /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'app-settings': return role === 'super_admin' ? <AppSettings role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'app-page-controls': return role === 'super_admin' ? <AppPageControls role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
-      case 'app-icons': return role === 'super_admin' ? <AppIcons role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
+
       default: return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
     }
   };
