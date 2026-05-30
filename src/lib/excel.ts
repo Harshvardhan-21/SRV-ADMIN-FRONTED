@@ -11,7 +11,7 @@ export function exportRowsToExcel(
   const safeRows = rows.length > 0 ? rows as ExportRow[] : [{ Info: 'No data available' }];
   const worksheet = XLSX.utils.json_to_sheet(safeRows);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
   
   const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([wbout], { type: 'application/octet-stream' });

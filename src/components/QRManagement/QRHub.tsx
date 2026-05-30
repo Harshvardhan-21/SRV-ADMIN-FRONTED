@@ -58,6 +58,7 @@ export default function QRHub({ role }: QRHubProps) {
 
   const [batches, setBatches] = useState<QRBatch[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const productSkuMap = new Map(products.map((p: any) => [String(p.id), p.sku]));
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -318,7 +319,7 @@ export default function QRHub({ role }: QRHubProps) {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{batch.productName}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>Product ID: {batch.productId || '-'}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>SKU: {productSkuMap.get(batch.productId) || batch.productId || '-'}</div>
                       </div>
                     </div>
                   </td>

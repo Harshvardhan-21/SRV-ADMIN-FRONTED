@@ -140,7 +140,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
       // 2. Excel file inside zip
       const wsData = [
-        ['QR ID', 'Product Name', 'Product ID', 'Points', 'Generated At', 'Status'],
+        ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'],
         ...generatedQRs.map(q => [
           q.id,
           q.productName,
@@ -187,7 +187,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!generatedQRs.length) return;
     setDownloading('csv');
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const header = ['QR ID', 'Product Name', 'Product ID', 'Points', 'Generated At', 'Status'].map(escape).join(',');
+    const header = ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'].map(escape).join(',');
     const rows = generatedQRs.map(q =>
       [q.id, q.productName, q.productId, q.points, new Date(q.generatedAt).toLocaleString('en-IN'), q.status].map(escape).join(',')
     );
@@ -211,7 +211,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     try {
       const XLSX = await import('xlsx');
       const wsData = [
-        ['QR ID', 'Product Name', 'Product ID', 'Points', 'Generated At', 'Status'],
+        ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'],
         ...generatedQRs.map(q => [
           q.id,
           q.productName,
@@ -470,6 +470,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                     </div>
                     <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, marginBottom: 12 }}>
                       <div><Zap size={12} style={{ display: 'inline', marginRight: 4 }} />{qr.points} points</div>
+                      <div>SKU: {qr.productId}</div>
                       <div>Generated: {new Date(qr.generatedAt).toLocaleDateString('en-IN')}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>

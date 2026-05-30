@@ -4,6 +4,7 @@ import { startTransition, useDeferredValue, useEffect, useEffectEvent, useState,
 import {
   Activity,
   CalendarClock,
+  Info,
   RefreshCcw,
   Sparkles,
   Store,
@@ -343,11 +344,89 @@ function appendRowsToBuckets(
   return buckets;
 }
 
+const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: string[]; inactive: string[] }> = {
+  electrician: {
+    icon: '⚡',
+    proactive: [
+      'Last activity within 7 days AND at least one of:',
+      '  • 10+ total scans',
+      '  • 500+ total points',
+      '  • 1+ redemptions',
+      '  • Wallet balance 500+',
+    ],
+    active: [
+      'Last activity within 30 days, OR',
+      'Has some scans, points, or redemptions',
+      '(Below proactive thresholds)',
+    ],
+    inactive: [
+      'Account status is inactive / suspended, OR',
+      'No meaningful scan, reward, or wallet activity detected',
+    ],
+  },
+  dealer: {
+    icon: '🏪',
+    proactive: [
+      'Last activity within 7 days AND at least one of:',
+      '  • 5+ electricians under them',
+      '  • 3+ orders',
+      '  • Achieved target > 0',
+    ],
+    active: [
+      'Last activity within 30 days, OR',
+      'Has some electricians, orders, or target progress',
+      '(Below proactive thresholds)',
+    ],
+    inactive: [
+      'Account status is inactive / suspended, OR',
+      'Low recent access and limited growth activity',
+    ],
+  },
+  counterboy: {
+    icon: '👤',
+    proactive: [
+      'Last activity within 7 days AND at least one of:',
+      '  • 5+ total scans',
+      '  • 200+ total points',
+      '  • Wallet balance 250+',
+      '  • 1+ redemptions',
+    ],
+    active: [
+      'Last activity within 30 days, OR',
+      'Has some scans, points, or redemptions',
+      '(Below proactive thresholds)',
+    ],
+    inactive: [
+      'Account status is inactive / suspended, OR',
+      'Little or no recent usage signals',
+    ],
+  },
+  customer: {
+    icon: '👥',
+    proactive: [
+      'Last activity within 7 days AND at least one of:',
+      '  • 200+ total points',
+      '  • 1+ redemptions',
+      '  • Wallet balance 250+',
+    ],
+    active: [
+      'Last activity within 30 days, OR',
+      'Has some points, redemptions, or wallet balance',
+      '(Below proactive thresholds)',
+    ],
+    inactive: [
+      'Account status is inactive / suspended, OR',
+      'Low or missing recent engagement signals',
+    ],
+  },
+};
+
 export default function ProActiveInactiveHub() {
   const C = useThemePalette();
   const [activeRole, setActiveRole] = useState<RoleTab>('electrician');
   const [activeBucket, setActiveBucket] = useState<ActivityTab>('proactive');
   const [visibleCount, setVisibleCount] = useState(CARD_RENDER_CHUNK);
+  const [showCriteria, setShowCriteria] = useState(false);
   const [datasets, setDatasets] = useState<Record<RoleTab, ActivityBuckets>>({
     electrician: emptyBuckets(),
     dealer: emptyBuckets(),
@@ -461,7 +540,7 @@ export default function ProActiveInactiveHub() {
             boxShadow: '0 18px 40px rgba(15,23,42,0.14)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
             <div
               style={{
                 width: 52,
@@ -475,10 +554,27 @@ export default function ProActiveInactiveHub() {
             >
               <TrendingUp size={24} />
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>Pro / Active / Inactive</div>
               <div style={{ fontSize: 14, opacity: 0.9 }}>Track engagement quality across all main app roles from one place.</div>
             </div>
+            <button
+              onClick={() => setShowCriteria(true)}
+              title="Classification criteria"
+              style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                cursor: 'pointer',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Info size={20} />
+            </button>
           </div>
           <div style={{ fontSize: 13, opacity: 0.9 }}>
             Classification uses the activity fields currently available in the admin data such as recent activity, joined date, scans, points, wallet movement, redemptions, and dealer network growth.
@@ -840,7 +936,57 @@ export default function ProActiveInactiveHub() {
         )}
       </div>
 
-      <style jsx>{`
+      {showCriteria && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setShowCriteria(false)}
+        >
+          <div
+            style={{ background: C.card, borderRadius: 20, width: 640, maxWidth: '95vw', maxHeight: '90vh', overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: '0 25px 70px rgba(0,0,0,0.25)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Info size={20} /> Classification Criteria
+              </div>
+              <button onClick={() => setShowCriteria(false)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>✕</button>
+            </div>
+            <div style={{ padding: '8px 24px 20px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
+              {ROLE_TABS.map(role => {
+                const c = CRITERIA[role.id];
+                return (
+                  <div key={role.id} style={{ marginTop: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 800, color: role.accent, marginBottom: 10 }}>
+                      <role.Icon size={18} /> {role.label}
+                    </div>
+                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr 1fr' }}>
+                      {(['proactive', 'active', 'inactive'] as ActivityTab[]).map(bucket => (
+                        <div key={bucket} style={{ background: C.bg, borderRadius: 12, padding: 12 }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: role.accent, marginBottom: 8, textTransform: 'uppercase' }}>{bucket}</div>
+                          <ul style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: 11.5, color: C.text, lineHeight: 1.6 }}>
+                            {c[bucket].map((line, i) => (
+                              <li key={i} style={{ marginBottom: 2, paddingLeft: line.startsWith('  •') ? 12 : 0 }}>{line}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 16, padding: '12px', background: C.bg, borderRadius: 10 }}>
+                <strong>Last activity</strong> is determined from the most recent of: lastLoginAt, lastLogin, lastActivityAt, updatedAt, recentActivity, or joinedDate.
+                <br />
+                <strong>Very recent</strong> = within 7 days. <strong>Recently active</strong> = within 30 days.
+                <br />
+                Accounts with <strong>inactive / suspended</strong> status are always classified as Inactive regardless of activity.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }

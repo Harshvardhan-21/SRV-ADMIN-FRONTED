@@ -18,6 +18,7 @@ interface QRCodeItem {
   qrId: string;
   batchNo: string;
   productId: string;
+  productSku?: string;
   productName: string;
   points: number;
   generatedDate: string;
@@ -138,6 +139,7 @@ export default function QRCodes({ role }: QRCodesProps) {
             qrId: codeStr,
             batchNo: qr.batchId ?? qr.batchNo ?? qr.batch_no ?? '—',
             productId: qr.productId ?? qr.product_id ?? '—',
+            productSku: qr.product?.sku ?? qr.productSku,
             productName: qr.productName ?? qr.product_name ?? qr.product?.name ?? '—',
             points: qr.points ?? qr.product?.points ?? 0,
             generatedDate: qr.createdAt ?? qr.generatedDate ?? new Date().toISOString(),
@@ -361,7 +363,7 @@ export default function QRCodes({ role }: QRCodesProps) {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{qr.productName}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>SKU: {qr.productId}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>SKU: {qr.productSku || qr.productId}</div>
                       </div>
                     </div>
                   </td>
@@ -594,13 +596,13 @@ export default function QRCodes({ role }: QRCodesProps) {
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{new Date(selectedQR.usedDate).toLocaleDateString('en-IN')}</div>
                 </div>
               )}
-              {selectedQR.usedBy && (
+              {(selectedQR.usedBy || selectedQR.lastScannedPhone || selectedQR.lastScannedCode) && (
                 <div style={{ background: C.bg, borderRadius: 12, padding: 16 }}>
                   <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>Used By</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
                     {selectedQR.lastScannedPhone || selectedQR.lastScannedCode
                       ? `${selectedQR.lastScannedPhone ?? ''}${selectedQR.lastScannedPhone && selectedQR.lastScannedCode ? ' · ' : ''}${selectedQR.lastScannedCode ?? ''}`
-                      : 'N/A'}
+                      : selectedQR.usedBy}
                   </div>
                 </div>
               )}

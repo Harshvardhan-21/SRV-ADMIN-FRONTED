@@ -67,7 +67,7 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
         const ws = XLSX.utils.aoa_to_sheet([keys, ...rows.map((r: any) => keys.map(k => r[k] ?? ''))]);
         ws['!cols'] = keys.map(() => ({ wch: 20 }));
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, title);
+        XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 31));
         zip.file(`${name}.xlsx`, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
         // CSV
         const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
