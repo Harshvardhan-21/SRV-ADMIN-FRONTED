@@ -10,6 +10,7 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
+import PasswordInputField from '@/components/Shared/PasswordInputField';
 
 interface DealersProps {
   role: AdminRole;
@@ -117,11 +118,10 @@ function ViewModal({
         </div>
 
         <div style={{ padding: 28 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 22 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 22 }}>
             {[
               { label: 'Electricians', value: dealer.electricianCount, Icon: Zap },
               { label: 'Dealer Bonus', value: `₹${Number(dealer.bonusPoints ?? 0).toLocaleString('en-IN')}`, Icon: Target },
-              { label: 'Bonus Status', value: String(dealer.bonusStatus ?? 'pending').replace(/^\w/, (match) => match.toUpperCase()), Icon: CheckCircle },
             ].map((s, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4, color: C.muted }}><s.Icon size={20} /></div>
@@ -180,19 +180,15 @@ function ViewModal({
             {permissions.canEdit && (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <input
-                    type="password"
+                  <PasswordInputField
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={setPassword}
                     placeholder="New password"
-                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
                   />
-                  <input
-                    type="password"
+                  <PasswordInputField
                     value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    onChange={setConfirmPassword}
                     placeholder="Confirm password"
-                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
                   />
                 </div>
                 {passwordFeedback && (
@@ -246,10 +242,13 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const isAdd = !dealer;
-  const [form, setForm] = useState<Partial<Dealer>>(dealer ?? {
-    name: '', profileImage: '', phone: '', email: '', dealerCode: '', town: '', district: '', state: '', address: '', pincode: '',
-    tier: 'Silver', status: 'active', gstNumber: '', bankLinked: false, upiId: '', bonusPoints: 0, bonusStatus: 'pending', contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
-    salesManName: '', townCode: '', rtoCode: '', listCode: '', electricianList: '',
+  const [form, setForm] = useState<Partial<Dealer>>(() => {
+    const base = dealer ? { ...dealer, bonusPoints: 0 } : {
+      name: '', profileImage: '', phone: '', email: '', dealerCode: '', town: '', district: '', state: '', address: '', pincode: '',
+      tier: 'Silver', status: 'active', gstNumber: '', bankLinked: false, upiId: '', bonusPoints: 0, contactPerson: '', joinedDate: new Date().toISOString().split('T')[0],
+      salesManName: '', townCode: '', rtoCode: '', listCode: '', electricianList: '',
+    };
+    return base as Partial<Dealer>;
   });
   const f = (k: keyof Dealer, v: unknown) => setForm(p => ({ ...p, [k]: v }));
   const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -365,13 +364,12 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
                 <option value="yes">Yes</option><option value="no">No</option>
               </select>
             </div>
-            <div><label style={labelStyle}>Dealer Bonus (₹)</label><input style={inputStyle} type="number" min={0} value={form.bonusPoints ?? ''} onChange={e => f('bonusPoints', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
-            <div><label style={labelStyle}>Bonus Status</label>
-              <select style={inputStyle} value={form.bonusStatus ?? 'pending'} onChange={e => f('bonusStatus', e.target.value)}>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-              </select>
-            </div>
+            {!isAdd && dealer && Number(dealer.bonusPoints) > 0 && (
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: -8, padding: '4px 0' }}>
+                Current Bonus: <strong style={{ color: '#15803D' }}>₹{Number(dealer.bonusPoints).toLocaleString('en-IN')}</strong>
+              </div>
+            )}
+            <div><label style={labelStyle}>Add Bonus (₹)</label><input style={inputStyle} type="number" min={0} value={form.bonusPoints ?? ''} onChange={e => f('bonusPoints', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
 
           </div>
 
@@ -584,7 +582,6 @@ export default function Dealers({ role }: DealersProps) {
         await dealerApi.update(editing!.id, dealerData);
         await financeApi.updateDealerBonus(editing!.id, {
           bonusPoints: typeof form.bonusPoints === 'number' ? form.bonusPoints : 0,
-          bonusStatus: form.bonusStatus ?? 'pending',
         });
         setEditing(undefined);
       }
@@ -661,7 +658,6 @@ export default function Dealers({ role }: DealersProps) {
           Status: d.status,
           ElectricianCount: d.electricianCount,
           DealerBonus: d.bonusPoints ?? 0,
-          BonusStatus: d.bonusStatus ?? 'pending',
           GSTNumber: d.gstNumber ?? '',
           BankLinked: d.bankLinked ? 'Yes' : 'No',
           JoinedDate: new Date(d.joinedDate).toLocaleDateString('en-IN'),

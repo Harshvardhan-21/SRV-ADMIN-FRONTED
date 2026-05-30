@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
+import PasswordInputField from '@/components/Shared/PasswordInputField';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -170,19 +171,15 @@ function ViewModal({
             {permissions.canEdit && (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <input
-                    type="password"
+                  <PasswordInputField
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={setPassword}
                     placeholder="New password"
-                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
                   />
-                  <input
-                    type="password"
+                  <PasswordInputField
                     value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    onChange={setConfirmPassword}
                     placeholder="Confirm password"
-                    style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}
                   />
                 </div>
                 {passwordFeedback && (

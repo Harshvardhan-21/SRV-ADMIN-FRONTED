@@ -95,7 +95,7 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
 
   const openEdit = (c: BonusRecord) => {
     setEditItem(c);
-    setEditForm({ dealerName: c.dealerName, dealerPhone: c.dealerPhone, electriciansCount: c.electriciansCount, bonusPoints: c.bonusPoints, status: c.status });
+    setEditForm({ dealerName: c.dealerName, dealerPhone: c.dealerPhone, electriciansCount: c.electriciansCount, bonusPoints: 0, status: c.status });
   };
 
   const handleEditSave = async () => {
@@ -263,7 +263,12 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
                   <input type="number" value={numberInputValue(editForm.electriciansCount)} onChange={e => setEditForm(f => ({ ...f, electriciansCount: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Bonus Points (₹)</label>
+                  <label style={labelStyle}>Add Bonus (₹)</label>
+                  {editItem && Number(editItem.bonusPoints) > 0 && (
+                    <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>
+                      Current: <strong style={{ color: '#15803D' }}>₹{Number(editItem.bonusPoints).toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
                   <input type="number" value={numberInputValue(editForm.bonusPoints)} onChange={e => setEditForm(f => ({ ...f, bonusPoints: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
                 </div>
               </div>
