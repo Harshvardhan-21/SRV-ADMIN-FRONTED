@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useThemePalette } from '@/lib/theme';
 import {
-  LayoutDashboard, Bolt, Store, Package, Star, Tag,
+  LayoutDashboard, Bolt, Store, Package, Star, Tags,
   ChartColumn, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageCircle, FileText,
@@ -31,7 +31,7 @@ const NAV_GROUPS = [
     label: 'Catalog',
     items: [
       { id: 'products', label: 'Products', Icon: Package },
-      { id: 'product-categories', label: 'Product Categories', Icon: Tag },
+      { id: 'product-categories', label: 'Product Categories', Icon: Tags },
       { id: 'points-config', label: 'Products Points', Icon: Star },
     ]
   },

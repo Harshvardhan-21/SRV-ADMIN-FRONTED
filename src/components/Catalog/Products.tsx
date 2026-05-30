@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
+import { Package, Box, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
 import type { Product, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
@@ -39,9 +39,9 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
         <div style={{ padding: 24 }}>
           <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {product.image ? (
-              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16.5 9.4 7.55 4.24a1 1 0 0 0-1.1 0L3 6.25m13.5 3.15L21 7.25m-4.5 2.15L12 11.5M7.55 4.24 3 6.25m4.55-2.01L12 4.5m0 7L3 11.5m9 0 9-4m-9 4v9m9-13v6.13M3 6.25v6.13m0-6.13 9 4\" /><path d=\"M21 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2\"/></svg>'; }} />
+              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; }} />
             ) : (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 160 }}><Package size={48} /></div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 160 }}><Box size={48} /></div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -58,7 +58,7 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
               { label: 'Stock', value: product.stock.toLocaleString('en-IN'), icon: 'Package', color: '#1D4ED8', bg: '#EFF6FF' },
               { label: 'Total Scanned', value: product.totalScanned.toLocaleString('en-IN'), icon: 'Camera', color: '#7C3AED', bg: '#F5F3FF' },
               { label: 'SKU', value: product.sku || '—', icon: 'Bookmark', color: '#DB2777', bg: '#FDF2F8' },
-              { label: 'MRP', value: product.mrp || '—', icon: 'Tag', color: '#C2410C', bg: '#FFF7ED' },
+              { label: 'MRP', value: product.mrp || '—', icon: 'Tags', color: '#C2410C', bg: '#FFF7ED' },
             ].map((s, i) => (
               <div key={i} style={{ background: C.card, borderRadius: 12, padding: '16px 14px', textAlign: 'center', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}><I name={s.icon} size={18} style={{ color: s.color }} /></div>
@@ -564,9 +564,9 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 46, height: 46, borderRadius: 10, background: C.bg, overflow: 'hidden', flexShrink: 0 }}>
                       {p.image ? (
-                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.innerHTML = '<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16.5 9.4 7.55 4.24a1 1 0 0 0-1.1 0L3 6.25m13.5 3.15L21 7.25m-4.5 2.15L12 11.5M7.55 4.24 3 6.25m4.55-2.01L12 4.5m0 7L3 11.5m9 0 9-4m-9 4v9m9-13v6.13M3 6.25v6.13m0-6.13 9 4\"/><path d=\"M21 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2\"/></svg>'; ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; } }} />
+                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.innerHTML = '<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; } }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><I name='Package' size={20} /></div>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><I name='Box' size={20} /></div>
                       )}
                     </div>
                     <div>

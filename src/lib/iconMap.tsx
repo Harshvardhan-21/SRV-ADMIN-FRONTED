@@ -1,10 +1,10 @@
 import {
-  Activity, AppWindow, Archive, Award, BarChart3, Bell, Bolt, Bookmark,
+  Activity, AppWindow, Archive, Award, BarChart3, Bell, Bolt, Bookmark, Box,
   Calendar, Camera, ChartColumn, ChartLine, Check, CheckCircle, Clipboard, Clock, Crown,
   DollarSign, Download, Edit, Eye, FileSpreadsheet, FileText, Folder, Gift, Hash,
   Headphones, ImageIcon, Info, Link, Loader, Mail, Medal, MessageCircle, Package, Phone,
   PieChart, Play, Repeat, Save, ScanLine, Search, Shield, ShieldCheck, Smartphone,
-  Sparkles, Star, Store, Target, Trash2, TrendingUp, Upload, User, UserCheck, Users, Wallet,
+  Sparkles, Star, Store, Tags, Target, Trash2, TrendingUp, Upload, User, UserCheck, Users, Wallet,
   XCircle, Zap, Globe, File, Clapperboard
 } from 'lucide-react';
 import React from 'react';
@@ -12,12 +12,12 @@ import React from 'react';
 type IconComponent = React.ComponentType<{ size?: number | string; className?: string; style?: React.CSSProperties }>;
 
 const iconMap: Record<string, IconComponent> = {
-  Activity, AppWindow, Archive, Award, BarChart3, Bell, Bolt, Bookmark,
+  Activity, AppWindow, Archive, Award, BarChart3, Bell, Bolt, Bookmark, Box,
   Calendar, Camera, ChartColumn, ChartLine, Check, CheckCircle, Clipboard, Clock, Crown,
   DollarSign, Download, Edit, Eye, FileSpreadsheet, FileText, Folder, Gift, Hash,
   Headphones, ImageIcon, Info, Link, Loader, Mail, Medal, MessageCircle, Package, Phone,
   PieChart, Play, Repeat, Save, ScanLine, Search, Shield, ShieldCheck, Smartphone,
-  Sparkles, Star, Store, Target, Trash2, TrendingUp, Upload, User, UserCheck, Users, Wallet,
+  Sparkles, Star, Store, Tags, Target, Trash2, TrendingUp, Upload, User, UserCheck, Users, Wallet,
   XCircle, Zap, Globe, File, Clapperboard,
 };
 

@@ -1,7 +1,7 @@
 'use client';
 import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tag, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tags, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
@@ -141,7 +141,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'app-users': { title: 'Customers', Icon: Users },
   counterboys: { title: 'Counter Boys', Icon: UserCheck },
   products: { title: 'Products', Icon: Package },
-  'product-categories': { title: 'Product Categories', Icon: Tag },
+  'product-categories': { title: 'Product Categories', Icon: Tags },
   'points-config': { title: 'Products Points', Icon: Star },
   'qr-hub': { title: 'QR Hub', Icon: QrCode },
   'qr-codes': { title: 'QR Codes', Icon: QrCode },

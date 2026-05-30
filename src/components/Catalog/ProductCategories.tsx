@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, FileSpreadsheet, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
+import { Tags, Plus, Pencil, Trash2, Search, ImageIcon, FileSpreadsheet, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -267,7 +267,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
             background: 'rgba(255,255,255,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Tag size={24} color="#fff" />
+            <Tags size={24} color="#fff" />
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Product Categories</div>
@@ -418,7 +418,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
                 }}
                 title={`View ${cat.productCount} products in ${cat.name}`}
               >
-                <Tag size={10} /> {cat.productCount} products {onNavigate ? '→' : ''}
+                <Tags size={10} /> {cat.productCount} products {onNavigate ? '→' : ''}
               </div>
             </div>
 
@@ -523,7 +523,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
                   background: C.accentSoft,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Tag size={18} color={C.accentText} />
+                  <Tags size={18} color={C.accentText} />
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>
                   {editingId !== null ? 'Edit Category' : 'Add Category'}
